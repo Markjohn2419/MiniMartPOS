@@ -375,10 +375,7 @@ function renderProducts() {
   const products = window.miniMartDB.products();
 
   const categories = [
-    "Beverages",
-    "Instant Food",
-    "Snacks",
-    "Dairy",
+    ...window.miniMartDB.categories(),
     ...new Set(products.map((product) => product.category)),
   ];
 

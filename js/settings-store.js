@@ -15,6 +15,12 @@ const defaultSettings = {
   logoDataUrl: "",
   currency: "PHP",
   theme: "light",
+  sukiEnabled: true,
+  sukiPesosPerPoint: 20,
+  sukiPesoValue: 1,
+  sukiMinPointsToRedeem: 10,
+  sukiPointsExpiry: "none",
+  sukiPointsExpiryDays: 90,
 };
 
 function cloneSettings(value) {
@@ -61,6 +67,29 @@ function getSettings() {
         ? threshold
         : defaultSettings.lowStockThreshold;
     settings.blockOutOfStockSales = settings.blockOutOfStockSales !== false;
+    settings.sukiEnabled = settings.sukiEnabled !== false;
+    const sukiPesosPerPoint = Number(settings.sukiPesosPerPoint);
+    settings.sukiPesosPerPoint =
+      Number.isFinite(sukiPesosPerPoint) && sukiPesosPerPoint > 0
+        ? sukiPesosPerPoint
+        : defaultSettings.sukiPesosPerPoint;
+    const sukiPesoValue = Number(settings.sukiPesoValue);
+    settings.sukiPesoValue =
+      Number.isFinite(sukiPesoValue) && sukiPesoValue > 0
+        ? sukiPesoValue
+        : defaultSettings.sukiPesoValue;
+    const sukiMinPoints = Number(settings.sukiMinPointsToRedeem);
+    settings.sukiMinPointsToRedeem =
+      Number.isInteger(sukiMinPoints) && sukiMinPoints >= 0
+        ? sukiMinPoints
+        : defaultSettings.sukiMinPointsToRedeem;
+    settings.sukiPointsExpiry =
+      settings.sukiPointsExpiry === "days" ? "days" : "none";
+    const sukiExpiryDays = Number(settings.sukiPointsExpiryDays);
+    settings.sukiPointsExpiryDays =
+      Number.isInteger(sukiExpiryDays) && sukiExpiryDays > 0
+        ? sukiExpiryDays
+        : defaultSettings.sukiPointsExpiryDays;
     const theme = normalizeTheme(settings.theme, true);
     if (settings.theme !== theme) {
       settings.theme = theme;

@@ -101,32 +101,41 @@
                 </label>
                 <label>
                   Timezone
-                  <select id="timezone" name="timezone">
-                    <option value="Asia/Manila">Asia/Manila</option>
-                    <option value="Asia/Singapore">Asia/Singapore</option>
-                    <option value="UTC">UTC</option>
-                  </select>
+                  <span class="settings-select-wrap">
+                    <select id="timezone" name="timezone">
+                      <option value="Asia/Manila">Asia/Manila</option>
+                      <option value="Asia/Singapore">Asia/Singapore</option>
+                      <option value="UTC">UTC</option>
+                    </select>
+                  </span>
                   <span class="field-error" id="timezoneError"></span>
                 </label>
                 <label>
                   Date format
-                  <select id="dateFormat" name="dateFormat">
-                    <option value="short">Short (Tue, Oct 13)</option>
-                    <option value="long">Long (Tuesday, October 13)</option>
-                    <option value="numeric">Numeric (Tue, 10/13)</option>
-                  </select>
+                  <span class="settings-select-wrap">
+                    <select id="dateFormat" name="dateFormat">
+                      <option value="short">Short (Tue, Oct 13)</option>
+                      <option value="long">Long (Tuesday, October 13)</option>
+                      <option value="numeric">Numeric (Tue, 10/13)</option>
+                    </select>
+                  </span>
                   <span class="field-error" id="dateFormatError"></span>
                 </label>
               </div>
               <div class="logo-field">
                 <label for="storeLogo">Store logo</label>
-                <input id="storeLogo" name="storeLogo" type="file" accept="image/png,image/jpeg,image/webp" />
+                <div class="logo-picker">
+                  <input id="storeLogo" name="storeLogo" type="file" accept="image/png,image/jpeg,image/webp" />
+                  <label class="settings-button-secondary logo-picker-button" for="storeLogo">CHOOSE FILE</label>
+                  <span class="logo-file-name" id="logoFileName">No file chosen</span>
+                  <button class="settings-button-ghost logo-remove-button" id="removeLogo" type="button" hidden>REMOVE</button>
+                </div>
                 <small>PNG, JPG, or WebP up to 200 KB.</small>
                 <img id="logoPreview" class="logo-preview" alt="Store logo preview" hidden />
                 <span class="field-error" id="storeLogoError"></span>
               </div>
               <div class="settings-actions">
-                <button class="settings-save" type="submit">SAVE STORE INFO</button>
+                <button class="settings-button-primary" type="submit">SAVE STORE INFO</button>
                 <span class="settings-status" id="settingsStatus" role="status" aria-live="polite"></span>
               </div>
             </form>
@@ -157,16 +166,159 @@
                 When enabled, checkout also prevents quantities above available stock.
               </p>
               <div class="settings-actions">
-                <button class="settings-save" type="submit">SAVE INVENTORY RULES</button>
+                <button class="settings-button-primary" type="submit">SAVE INVENTORY RULES</button>
                 <span class="settings-status" id="inventoryRulesStatus" role="status" aria-live="polite"></span>
               </div>
             </form>
           </article>
-          <article class="settings-card">
-            <h3>Suki Rewards</h3>
+          <article class="settings-card category-settings-card">
+            <div class="category-summary">
+              <div class="category-summary-header">
+                <div>
+                  <h3>Categories</h3>
+                  <small id="categoryManagementSummary">0 categories</small>
+                </div>
+                <button id="openCategoryManagement" class="settings-button-secondary category-manage-button" type="button">
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="M4 7h16M4 12h16M4 17h16" />
+                    <circle cx="9" cy="7" r="2" />
+                    <circle cx="15" cy="12" r="2" />
+                    <circle cx="11" cy="17" r="2" />
+                  </svg>
+                  MANAGE CATEGORIES
+                </button>
+              </div>
+              <div id="categorySummaryChips" class="category-summary-chips"></div>
+            </div>
           </article>
           <article class="settings-card">
-            <h3>Data &amp; Backup</h3>
+            <form id="sukiSettingsForm" novalidate>
+              <h3>Suki Rewards</h3>
+              <div class="settings-checkbox suki-enabled-row">
+                <input id="sukiEnabled" name="sukiEnabled" type="checkbox" />
+                <label for="sukiEnabled">Enable Suki Rewards</label>
+              </div>
+              <div class="settings-fields">
+                <label>
+                  Pesos spent per 1 point
+                  <input id="sukiPesosPerPoint" name="sukiPesosPerPoint" type="number" min="0.01" step="0.01" required />
+                  <span class="field-error" id="sukiPesosPerPointError"></span>
+                </label>
+                <label>
+                  Peso value of 1 point
+                  <input id="sukiPesoValue" name="sukiPesoValue" type="number" min="0.01" step="0.01" required />
+                  <span class="field-error" id="sukiPesoValueError"></span>
+                </label>
+                <label>
+                  Minimum points to redeem
+                  <input id="sukiMinPointsToRedeem" name="sukiMinPointsToRedeem" type="number" min="0" step="1" required />
+                  <span class="field-error" id="sukiMinPointsToRedeemError"></span>
+                </label>
+                <label>
+                  Points expiry
+                  <span class="settings-select-wrap">
+                    <select id="sukiPointsExpiry" name="sukiPointsExpiry">
+                      <option value="none">No expiry</option>
+                      <option value="days">Expire after a number of days</option>
+                    </select>
+                  </span>
+                  <span class="field-error" id="sukiPointsExpiryError"></span>
+                </label>
+                <label id="sukiPointsExpiryDaysField">
+                  Expiry days
+                  <input id="sukiPointsExpiryDays" name="sukiPointsExpiryDays" type="number" min="1" step="1" required />
+                  <span class="field-error" id="sukiPointsExpiryDaysError"></span>
+                </label>
+              </div>
+              <p class="settings-help">These rules are saved for future points earning and redemption. They do not change checkout yet.</p>
+              <div class="settings-actions">
+                <button class="settings-button-primary" type="submit">SAVE SUKI SETTINGS</button>
+                <span class="settings-status" id="sukiSettingsStatus" role="status" aria-live="polite"></span>
+              </div>
+            </form>
+          </article>
+          <article class="settings-card">
+            <div class="data-backup-card">
+              <h3>Data &amp; Backup</h3>
+              <p class="settings-help">Export reports or save a complete copy of this register before moving devices.</p>
+              <div class="report-export-panel">
+                <div class="report-export-controls">
+                  <label>
+                    Data
+                    <span class="settings-select-wrap">
+                      <select id="reportExportData">
+                        <option value="sales">Sales</option>
+                        <option value="products">Products</option>
+                        <option value="customers">Customers</option>
+                      </select>
+                    </span>
+                  </label>
+                  <label id="salesRangeField">
+                    Date range
+                    <span class="settings-select-wrap">
+                      <select id="salesRange">
+                        <option value="today">Today</option>
+                        <option value="last7">Last 7 days</option>
+                        <option value="month" selected>This month</option>
+                        <option value="all">All time</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                    </span>
+                  </label>
+                </div>
+                <div class="custom-date-fields" id="customDateFields" hidden>
+                  <label>Start date <input id="salesStartDate" type="date" /></label>
+                  <label>End date <input id="salesEndDate" type="date" /></label>
+                </div>
+                <p class="settings-help" id="customerExportNote" hidden>Includes phone numbers. Keep this file private.</p>
+                <div class="report-export-summary" id="reportExportSummary" role="status" aria-live="polite"></div>
+                <div class="report-export-actions">
+                  <button class="settings-button-primary" id="exportExcel" type="button">
+                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4h11v16H4zM15 8h5v12h-5M8 8l3 4-3 4M11 8l-3 4 3 4" /></svg>
+                    EXPORT EXCEL
+                  </button>
+                  <button class="settings-button-secondary" id="exportPdf" type="button">
+                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM15 3v4h4M8 13h2a2 2 0 0 0 0-4H8v6M13 9h2a3 3 0 0 1 0 6h-2z" /></svg>
+                    EXPORT PDF
+                  </button>
+                </div>
+                <div class="settings-status" id="reportExportStatus" role="status" aria-live="polite"></div>
+              </div>
+              <div class="backup-actions">
+                <button class="settings-button-primary" id="downloadBackup" type="button">DOWNLOAD FULL BACKUP</button>
+                <label class="settings-button-secondary backup-upload-button" for="restoreBackup">CHOOSE BACKUP FILE</label>
+                <input id="restoreBackup" type="file" accept="application/json,.json" />
+              </div>
+              <p class="settings-help">Restoring replaces products, sales, categories, customers, and settings after confirmation.</p>
+              <div class="settings-status" id="backupStatus" role="status" aria-live="polite"></div>
+              <div class="product-import-panel">
+                <div class="settings-subsection-heading">
+                  <div>
+                    <h4>Products</h4>
+                    <p class="settings-help">Import products from an Excel file. Download a backup first.</p>
+                  </div>
+                  <button class="settings-button-secondary" id="downloadProductTemplate" type="button">DOWNLOAD TEMPLATE</button>
+                </div>
+                <div class="product-import-actions">
+                  <label class="settings-button-secondary product-import-picker" for="productImportFile">CHOOSE EXCEL FILE</label>
+                  <input id="productImportFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                  <span id="productImportFileName">No file chosen</span>
+                  <button class="settings-button-ghost product-import-remove" id="removeProductImportFile" type="button" hidden aria-label="Remove selected product file">×</button>
+                </div>
+                <p class="settings-help product-import-helper">Accepts .xlsx up to 2 MB, max 2,000 rows.</p>
+                <div class="product-import-results">
+                  <div class="settings-status" id="productImportStatus" role="status" aria-live="polite"></div>
+                  <button class="settings-button-secondary product-error-download" id="downloadProductErrors" type="button" hidden>DOWNLOAD ERROR ROWS</button>
+                </div>
+              </div>
+              <div class="danger-zone">
+                <div>
+                  <h4>DANGER ZONE</h4>
+                  <p class="settings-help">Erase products, sales, categories, and Suki customers while keeping Settings and login.</p>
+                </div>
+                <button class="settings-button-danger" id="openResetData" type="button">RESET DATA</button>
+              </div>
+            </div>
           </article>
           <article class="settings-card">
             <div id="appearanceForm">
@@ -175,7 +327,7 @@
                 <span id="themeToggleLabel">Dark mode</span>
                 <button
                   id="themeToggle"
-                  class="theme-toggle"
+                  class="theme-toggle settings-button-ghost"
                   type="button"
                   role="switch"
                   aria-checked="false"
@@ -185,15 +337,184 @@
                   <span class="theme-toggle-track"><span></span></span>
                 </button>
               </div>
+              <section class="device-status" aria-labelledby="deviceStatusTitle">
+                <div class="device-status-heading">
+                  <div>
+                    <h4 id="deviceStatusTitle">Device status</h4>
+                    <p class="settings-help">NFC card reader</p>
+                  </div>
+                  <button class="settings-button-secondary device-status-check" id="checkNfcStatus" type="button">
+                    CHECK AGAIN
+                  </button>
+                </div>
+                <div class="device-status-content" id="nfcStatusRegion" aria-live="polite">
+                  <div class="device-status-row">
+                    <span class="device-status-label">NFC card reader</span>
+                    <span class="device-status-badge device-status-badge-neutral" id="nfcStatusBadge">
+                      <span aria-hidden="true">?</span>
+                      <span id="nfcStatusText">Checking</span>
+                    </span>
+                  </div>
+                  <p class="device-status-explanation" id="nfcStatusExplanation">
+                    Checking this device and browser.
+                  </p>
+                  <p class="device-status-details" id="nfcStatusDetails"></p>
+                  <p class="device-status-confirmation" id="nfcStatusConfirmation" role="status"></p>
+                </div>
+              </section>
             </div>
           </article>
         </section>
       </main>
     </div>
+    <div class="settings-modal category-management-modal" id="categoryManagementModal" hidden>
+      <div
+        class="settings-dialog category-management-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="categoryManagementTitle"
+      >
+        <div class="category-management-dialog-header">
+          <div>
+            <div class="eyebrow">CATEGORY MANAGEMENT</div>
+            <h2 id="categoryManagementTitle">Manage categories</h2>
+            <small id="categoryManagementModalSummary">0 categories</small>
+          </div>
+          <button class="dialog-close settings-button-ghost" id="closeCategoryManagement" type="button" aria-label="Close category management">×</button>
+        </div>
+        <div class="category-management-toolbar">
+          <label class="category-management-search">
+            <span class="sr-only">Search categories</span>
+            <span class="category-management-search-icon" aria-hidden="true"></span>
+            <input id="categoryManagementSearch" type="search" placeholder="Search categories…" autocomplete="off" />
+            <button class="settings-button-ghost" id="clearCategoryManagementSearch" type="button" aria-label="Clear category search" hidden>×</button>
+          </label>
+          <small id="categoryManagementReorderNote" hidden>Clear search to reorder.</small>
+        </div>
+        <div id="categoryManagementList" class="category-management-list" aria-label="Categories"></div>
+        <div id="categoryManagementEmpty" class="category-management-empty" hidden>
+          <span class="category-management-empty-icon" aria-hidden="true">⌕</span>
+          <span>No categories found. Try a different name.</span>
+        </div>
+        <div class="category-management-footer">
+          <div class="category-management-modal-status" id="categoryManagementStatus" role="status" aria-live="polite"></div>
+          <div class="settings-dialog-actions">
+            <button class="settings-button-primary" id="doneCategoryManagement" type="button">DONE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="settings-modal" id="categoryDeleteModal" hidden>
+      <div class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="categoryDeleteTitle">
+        <div class="dialog-heading">
+          <div>
+            <div class="eyebrow">CATEGORY MANAGEMENT</div>
+            <h2 id="categoryDeleteTitle">Move products before deleting</h2>
+          </div>
+          <button class="dialog-close settings-button-ghost" id="closeCategoryDelete" type="button" aria-label="Close">×</button>
+        </div>
+        <p id="categoryDeleteCopy"></p>
+        <label class="category-move-field">
+          Move products to
+          <select id="categoryMoveTarget"></select>
+        </label>
+        <div class="settings-dialog-actions">
+          <button class="settings-button-secondary" id="cancelCategoryDelete" type="button">CANCEL</button>
+          <button class="settings-button-danger" id="confirmCategoryDelete" type="button">MOVE &amp; DELETE</button>
+        </div>
+      </div>
+    </div>
+      <div class="settings-modal product-import-modal" id="productImportModal" hidden>
+        <div class="settings-dialog product-import-dialog" role="dialog" aria-modal="true" aria-labelledby="productImportTitle">
+          <div class="settings-dialog-header">
+            <div>
+              <div class="eyebrow">PRODUCT IMPORT</div>
+              <h2 id="productImportTitle">Import products</h2>
+            </div>
+            <button class="dialog-close settings-button-ghost" id="closeProductImport" type="button" aria-label="Close product import">×</button>
+          </div>
+          <div class="product-import-options">
+            <label>
+              Duplicate handling
+              <span class="settings-select-wrap">
+                <select id="productDuplicateMode">
+                  <option value="skip" selected>Skip duplicates</option>
+                  <option value="update">Update existing products</option>
+                </select>
+              </span>
+            </label>
+            <label>
+              Missing categories
+              <span class="settings-select-wrap">
+                <select id="productMissingCategoryMode">
+                  <option value="create" selected>Create missing categories</option>
+                  <option value="uncategorized">Put them in Uncategorized / skip rows</option>
+                </select>
+              </span>
+            </label>
+          </div>
+          <div class="product-import-summary" id="productImportSummary" role="status" aria-live="polite"></div>
+          <div class="product-import-filter">
+            <label>
+              Show
+              <span class="settings-select-wrap">
+                <select id="productImportFilter">
+                  <option value="all">All</option>
+                  <option value="errors">Errors</option>
+                  <option value="duplicates">Duplicates</option>
+                  <option value="new">New</option>
+                </select>
+              </span>
+            </label>
+          </div>
+          <div class="product-import-preview-wrap">
+            <table class="product-import-preview">
+              <thead><tr><th>Row</th><th>Name</th><th>Category</th><th>Cost</th><th>Price</th><th>Stock</th><th>Status</th><th>Will change</th></tr></thead>
+              <tbody id="productImportPreview"></tbody>
+            </table>
+            <div class="product-import-empty" id="productImportEmpty" hidden>No rows match this filter.</div>
+          </div>
+          <p class="settings-help">Errors are never imported. Review the rows, then confirm the final count.</p>
+          <div class="settings-dialog-actions product-import-footer">
+            <span class="settings-status" id="productImportModalStatus" role="status" aria-live="polite"></span>
+            <button class="settings-button-secondary" id="cancelProductImport" type="button">CANCEL</button>
+            <button class="settings-button-primary" id="confirmProductImport" type="button" disabled>IMPORT 0 PRODUCTS</button>
+          </div>
+      </div>
+    </div>
+      <div class="settings-modal reset-data-modal" id="resetDataModal" hidden>
+        <div class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="resetDataTitle">
+          <div class="settings-dialog-header">
+            <div>
+              <div class="eyebrow">DANGER ZONE</div>
+              <h2 id="resetDataTitle">Reset all data</h2>
+            </div>
+            <button class="dialog-close settings-button-ghost" id="closeResetData" type="button" aria-label="Close reset data dialog">×</button>
+          </div>
+          <p id="resetDataCounts"></p>
+          <p class="settings-help">Download a backup first. Settings and login will be kept.</p>
+          <button class="settings-button-secondary" id="backupBeforeReset" type="button">DOWNLOAD BACKUP NOW</button>
+          <label class="reset-confirm-field">
+            Type RESET to confirm
+            <input id="resetConfirmText" type="text" autocomplete="off" />
+          </label>
+          <div class="settings-dialog-actions">
+            <button class="settings-button-secondary" id="cancelResetData" type="button">CANCEL</button>
+            <button class="settings-button-danger" id="confirmResetData" type="button" disabled>RESET ALL DATA</button>
+          </div>
+          <div class="settings-status" id="resetDataStatus" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/auth-client.js"></script>
     <script src="js/settings-store.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/vendor/xlsx.full.min.js"></script>
+    <script src="js/vendor/jspdf.umd.min.js"></script>
+    <script src="js/vendor/jspdf.plugin.autotable.min.js"></script>
+    <script src="js/vendor/noto-sans-font.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/navigation.js"></script>
   </body>

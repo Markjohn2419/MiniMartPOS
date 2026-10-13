@@ -219,6 +219,56 @@ window.miniMartDB = {
   saveCategories(categories) {
     write(CATEGORIES_KEY, [...new Set(categories)]);
   },
+  renameCategory(oldName, newName) {
+    const categories = this.categories();
+    const products = this.products().map((product) =>
+      product.category === oldName ? { ...product, category: newName } : product,
+    );
+    const renamed = categories.map((category) =>
+      category === oldName ? newName : category,
+    );
+    const icons = read(CATEGORY_ICONS_KEY, {});
+    if (icons[oldName] && !icons[newName]) icons[newName] = icons[oldName];
+    delete icons[oldName];
+    write(CATEGORIES_KEY, renamed);
+    write(PRODUCTS_KEY, products);
+    write(CATEGORY_ICONS_KEY, icons);
+  },
+  moveCategory(category, direction) {
+    const categories = this.categories();
+    const index = categories.indexOf(category);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= categories.length) return;
+    [categories[index], categories[nextIndex]] = [
+      categories[nextIndex],
+      categories[index],
+    ];
+    write(CATEGORIES_KEY, categories);
+  },
+  deleteCategory(category, moveTo = "") {
+    const products = this.products();
+    const hasProducts = products.some((product) => product.category === category);
+    if (hasProducts && !moveTo) {
+      return { error: new Error("A destination category is required.") };
+    }
+    if (hasProducts && !this.categories().includes(moveTo)) {
+      return { error: new Error("The destination category does not exist.") };
+    }
+    if (hasProducts) {
+      this.saveProducts(
+        products.map((product) =>
+          product.category === category
+            ? { ...product, category: moveTo }
+            : product,
+        ),
+      );
+    }
+    const icons = read(CATEGORY_ICONS_KEY, {});
+    delete icons[category];
+    write(CATEGORIES_KEY, this.categories().filter((entry) => entry !== category));
+    write(CATEGORY_ICONS_KEY, icons);
+    return { error: null };
+  },
   categoryIcon(category) {
     const defaults = {
       Beverages: "Icons/beverages.png",

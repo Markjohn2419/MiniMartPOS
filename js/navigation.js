@@ -7,6 +7,10 @@ const settings = settingsApi ? settingsApi.get() : {};
 
 settingsApi?.applyTheme(settings);
 
+document.querySelectorAll(".suki-link").forEach((link) => {
+  link.hidden = settings.sukiEnabled === false;
+});
+
 document.querySelectorAll(".date").forEach((element) => {
   element.textContent = settingsApi
     ? settingsApi.formatDate(new Date(), settings)

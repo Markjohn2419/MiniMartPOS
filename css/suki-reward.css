@@ -2156,3 +2156,51 @@ input:focus-visible {
     transition: none;
   }
 }
+ .suki-disabled-notice {
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+}
+
+.suki-disabled-notice h2 {
+  margin: 5px 0 8px;
+  font:
+    700 28px "Barlow Condensed",
+    sans-serif;
+}
+
+.suki-disabled-notice p {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.suki-disabled-notice a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--white);
+  font:
+    600 13px "Barlow Condensed",
+    sans-serif;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+}
+
+@media (max-width: 600px) {
+  .suki-disabled-notice {
+    padding: 20px;
+  }
+
+  .suki-disabled-notice a {
+    width: 100%;
+    justify-content: center;
+  }
+}

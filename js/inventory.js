@@ -67,11 +67,9 @@ function updateIconPicker() {
 function renderRows() {
   const products = window.miniMartDB.products();
   const categories = [
-    ...new Set([
-      ...window.miniMartDB.categories(),
-      ...products.map((product) => product.category),
-    ]),
-  ];
+    ...window.miniMartDB.categories(),
+    ...new Set(products.map((product) => product.category)),
+  ].filter((category, index, all) => all.indexOf(category) === index);
   tbody.innerHTML = categories
     .map((category) => {
       const categoryProducts = products

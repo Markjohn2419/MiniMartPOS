@@ -98,6 +98,13 @@ const cancelUnlinkNfc = document.getElementById("cancelUnlinkNfc");
 const confirmUnlinkNfc = document.getElementById("confirmUnlinkNfc");
 
 const unlinkNfcCopy = document.getElementById("unlinkNfcCopy");
+const sukiDisabledNotice = document.getElementById("sukiDisabledNotice");
+const sukiContent = document.querySelector(".suki-content");
+
+if (window.miniMartSettings?.get().sukiEnabled === false) {
+  sukiDisabledNotice.hidden = false;
+  sukiContent.hidden = true;
+}
 
 /* =========================================================
    UTILITY
