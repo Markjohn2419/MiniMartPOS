@@ -15,7 +15,6 @@
   border: 0;
   border-radius: 3px;
   padding: 9px 13px;
-  cursor: pointer;
   font:
     600 14px "Barlow Condensed",
     sans-serif;
@@ -49,7 +48,6 @@
   padding: 10px 14px;
   background: var(--red);
   color: var(--white);
-  cursor: pointer;
   font:
     600 13px "Barlow Condensed",
     sans-serif;
@@ -69,7 +67,6 @@
     sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  cursor: pointer;
 }
 .inventory-page .category-group:hover td,
 .inventory-page .category-group:focus-visible td {
@@ -154,7 +151,6 @@ html[data-theme="dark"] .inventory-page .icon-option img {
   border: 1px solid var(--line);
   border-radius: 4px;
   background: var(--white);
-  cursor: pointer;
 }
 .inventory-page .icon-option:hover,
 .inventory-page .icon-option.selected {

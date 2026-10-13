@@ -82,7 +82,6 @@
   box-shadow: 0 9px 22px rgba(25, 35, 29, 0.1);
 }
 .reports-page .metric-action {
-  cursor: pointer;
 }
 .reports-page .metric-action:focus-visible {
   outline: 2px solid var(--blue);
@@ -381,7 +380,6 @@
   height: 140px;
 }
 .reports-page .period-plot {
-  cursor: crosshair;
   touch-action: none;
 }
 .reports-page .period-columns {
@@ -817,7 +815,6 @@
   border: 0;
   padding: 0;
   background: transparent;
-  cursor: pointer;
   display: flex;
   flex-direction: column;
   justify-content: end;
@@ -977,7 +974,6 @@
   padding: 0;
   background: transparent;
   color: inherit;
-  cursor: pointer;
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
@@ -1068,7 +1064,6 @@
   border: 0;
   background: transparent;
   color: var(--muted);
-  cursor: pointer;
   font-size: 25px;
   line-height: 1;
 }
@@ -1128,7 +1123,6 @@
   border: 0;
   border-radius: 3px;
   padding: 10px 13px;
-  cursor: pointer;
   text-decoration: none;
   font:
     600 13px "Barlow Condensed",

@@ -39,13 +39,11 @@ button,
 .nav-item,
 .status-label,
 .stamp-progress {
-  cursor: default;
   user-select: none;
 }
 input,
 textarea,
 [contenteditable="true"] {
-  cursor: text;
   user-select: text;
 }
 html,
@@ -121,7 +119,6 @@ select {
   border-radius: 16px;
   background: transparent;
   color: var(--login-muted);
-  cursor: pointer;
   font-weight: 700;
 }
 .mode-tab.is-active {
@@ -151,11 +148,11 @@ h2 {
   width: 100%;
   height: 42px;
   margin-top: 6px;
-  padding: 0 12px;
+  padding: 0 40px 0 12px;
   border: 1px solid var(--login-edge);
   border-radius: 16px;
   outline: 0;
-  background: var(--login-paper);
+  background-color: var(--login-paper);
   color: var(--login-ink);
 }
 .field input:focus,
@@ -201,7 +198,6 @@ h2 {
   border-radius: 16px;
   background: transparent;
   color: var(--login-teal);
-  cursor: pointer;
   font-size: 16px;
 }
 .remember-field {
@@ -222,12 +218,10 @@ h2 {
   border-radius: 16px;
   background: var(--login-papaya);
   color: var(--login-paper);
-  cursor: pointer;
   font-weight: 800;
 }
 .submit-button:disabled {
   opacity: 0.6;
-  cursor: not-allowed;
 }
 .helper-link {
   display: block;
@@ -258,20 +252,8 @@ h2 {
   border: 0;
   background: transparent;
   color: var(--login-teal);
-  cursor: pointer;
   text-decoration: underline;
 }
 [hidden] {
   display: none !important;
-}
-button,
-a {
-  cursor: default !important;
-  user-select: none;
-}
-input,
-textarea,
-[contenteditable="true"] {
-  cursor: text;
-  user-select: text;
 }

@@ -3,12 +3,12 @@
 ========================================================= */
 
 .suki-page {
-  background: #f5f7fb;
+  background: var(--paper);
 }
 
 html[data-theme="dark"] .suki-page {
-  background: #18211d;
-  color: #f2f4ed;
+  background: var(--paper);
+  color: var(--ink);
 }
 
 html[data-theme="dark"] .suki-page .suki-heading,
@@ -37,9 +37,20 @@ html[data-theme="dark"] .suki-page label {
 html[data-theme="dark"] .suki-page input,
 html[data-theme="dark"] .suki-page select,
 html[data-theme="dark"] .suki-page textarea {
-  background: #222d27;
+  background-color: var(--field);
   border-color: #46534b;
   color: #f2f4ed;
+}
+
+html[data-theme="dark"] .suki-page .suki-search {
+  background: var(--surface-raised);
+  border-color: var(--line);
+}
+
+html[data-theme="dark"] .suki-page .suki-search input {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
 }
 
 html[data-theme="dark"] .suki-page .suki-tabs,
@@ -77,7 +88,7 @@ html[data-theme="dark"] .suki-page .save-button {
   margin: 4px 0;
   font-size: 30px;
   line-height: 1.15;
-  color: #18233d;
+  color: var(--ink);
 }
 
 .add-suki-button {
@@ -88,7 +99,6 @@ html[data-theme="dark"] .suki-page .save-button {
   padding: 12px 18px;
   font-size: 14px;
   font-weight: 700;
-  cursor: pointer;
   white-space: nowrap;
   transition: 0.2s ease;
 }
@@ -104,7 +114,7 @@ html[data-theme="dark"] .suki-page .save-button {
 .suki-tabs {
   display: flex;
   gap: 25px;
-  border-bottom: 1px solid #dbe1ec;
+  border-bottom: 1px solid var(--line);
   margin-bottom: 20px;
 }
 
@@ -112,11 +122,10 @@ html[data-theme="dark"] .suki-page .save-button {
   position: relative;
   border: 0;
   background: transparent;
-  color: #71809a;
+  color: var(--muted);
   padding: 0 18px 13px;
   font-size: 15px;
   font-weight: 600;
-  cursor: pointer;
 }
 
 .suki-tab::after {
@@ -131,11 +140,16 @@ html[data-theme="dark"] .suki-page .save-button {
 }
 
 .suki-tab.is-active {
-  color: #2864e8;
+  color: var(--red);
 }
 
 .suki-tab.is-active::after {
-  background: #2864e8;
+  background: var(--red);
+}
+
+.suki-tab:hover,
+.suki-tab:focus-visible {
+  color: var(--red);
 }
 
 /* =========================================================
@@ -193,8 +207,6 @@ html[data-theme="dark"] .suki-page .save-button {
   display: flex;
   align-items: center;
   justify-content: center;
-
-  cursor: pointer;
 
   box-shadow:
     0 8px 25px rgba(40, 100, 232, 0.25),
@@ -482,8 +494,6 @@ html[data-theme="dark"] .suki-page .save-button {
 
   font-size: 14px;
   font-weight: 700;
-
-  cursor: pointer;
 }
 
 /* =========================================================
@@ -503,9 +513,9 @@ html[data-theme="dark"] .suki-page .save-button {
 
   padding: 11px 14px;
 
-  background: #fff;
+  background: var(--surface-raised);
 
-  border: 1px solid #dce3ef;
+  border: 1px solid var(--line);
 
   border-radius: 10px;
 
@@ -513,22 +523,30 @@ html[data-theme="dark"] .suki-page .save-button {
 }
 
 .suki-search span {
-  color: #7c899d;
+  color: var(--muted);
   font-size: 20px;
 }
 
 .suki-search input {
   flex: 1;
-
   min-width: 0;
-
   border: 0;
-
   outline: 0;
 
   background: transparent;
 
-  color: #18233d;
+  color: var(--ink);
+  font: inherit;
+}
+
+.suki-search input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.suki-search:focus-within {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px var(--accent-glow);
 
   font-size: 14px;
 }
@@ -559,21 +577,20 @@ html[data-theme="dark"] .suki-page .save-button {
   align-items: center;
   justify-content: space-between;
 
-  gap: 15px;
+  gap: 20px;
 
   padding: 16px;
 
-  border: 1px solid #dce3ef;
+  border: 1px solid var(--line);
 
   border-radius: 13px;
 
-  background: #ffffff;
+  background: var(--surface-raised);
 
-  color: #18233d;
+  color: var(--ink);
+  font: inherit;
 
   text-align: left;
-
-  cursor: pointer;
 
   transition:
     transform 0.2s ease,
@@ -584,7 +601,7 @@ html[data-theme="dark"] .suki-page .save-button {
 .suki-card:hover {
   transform: translateY(-2px);
 
-  border-color: #c5d3eb;
+  border-color: var(--red);
 
   box-shadow: 0 8px 22px rgba(34, 55, 90, 0.08);
 }
@@ -608,7 +625,15 @@ html[data-theme="dark"] .suki-page .nfc-browser-warning {
 
 html[data-theme="dark"] .suki-page .suki-card:hover {
   background: color-mix(in srgb, var(--blue) 10%, var(--surface-raised));
-  border-color: var(--blue);
+  border-color: var(--red);
+}
+
+html[data-theme="dark"] .suki-page .suki-tab.is-active {
+  color: var(--red);
+}
+
+html[data-theme="dark"] .suki-page .suki-tab.is-active::after {
+  background: var(--red);
 }
 
 html[data-theme="dark"] .suki-page .suki-card strong,
@@ -632,13 +657,16 @@ html[data-theme="dark"] .suki-page .suki-toast {
 .suki-card > div:last-child {
   flex-shrink: 0;
 
+  display: grid;
+  grid-template-columns: repeat(2, minmax(62px, auto));
+  gap: 12px;
   text-align: right;
 }
 
 .suki-card strong {
   display: block;
 
-  color: #18233d;
+  color: var(--ink);
 
   font-size: 14px;
 }
@@ -648,13 +676,13 @@ html[data-theme="dark"] .suki-page .suki-toast {
 
   margin-top: 4px;
 
-  color: #7b879a;
+  color: var(--muted);
 
   font-size: 11px;
 }
 
 .suki-card > div:last-child strong {
-  color: #2864e8;
+  color: var(--red);
 
   font-size: 14px;
 }
@@ -795,8 +823,6 @@ html[data-theme="dark"] .suki-page .suki-toast {
   color: #56647b;
 
   font-size: 22px;
-
-  cursor: pointer;
 }
 
 /* =========================================================
@@ -987,8 +1013,6 @@ html[data-theme="dark"] .suki-page .suki-toast {
 
   font-size: 13px;
   font-weight: 700;
-
-  cursor: pointer;
 }
 
 .cancel-button {
@@ -1005,8 +1029,6 @@ html[data-theme="dark"] .suki-page .suki-toast {
 
 .save-button:disabled {
   opacity: 0.5;
-
-  cursor: not-allowed;
 }
 
 /* =========================================================
@@ -1038,8 +1060,6 @@ html[data-theme="dark"] .suki-page .suki-toast {
 
   font-size: 13px;
   font-weight: 700;
-
-  cursor: pointer;
 }
 
 .secondary-button:hover {
@@ -1398,8 +1418,6 @@ html[data-theme="dark"] .suki-page .suki-toast {
 
   font-size: 12px;
   font-weight: 700;
-
-  cursor: pointer;
 }
 
 .suki-nfc-link-button:hover {
@@ -1407,7 +1425,6 @@ html[data-theme="dark"] .suki-page .suki-toast {
 }
 
 .suki-nfc-link-button:disabled {
-  cursor: wait;
   opacity: 0.6;
 }
 
@@ -1719,8 +1736,6 @@ html[data-theme="dark"] .suki-page .suki-toast {
   font-size: 12px;
   font-weight: 700;
 
-  cursor: pointer;
-
   transition:
     background 0.2s ease,
     transform 0.2s ease;
@@ -1793,14 +1808,14 @@ html[data-theme="dark"] .suki-page .nfc-browser-warning {
 
 html[data-theme="dark"] .suki-page .suki-card:hover,
 html[data-theme="dark"] .suki-page .suki-history-item:hover {
-  background: color-mix(in srgb, var(--blue) 10%, var(--surface-raised));
-  border-color: var(--blue);
+  background: color-mix(in srgb, var(--red) 10%, var(--surface-raised));
+  border-color: var(--red);
 }
 
 html[data-theme="dark"] .suki-page .field-label input,
 html[data-theme="dark"] .suki-page .suki-search input {
-  background: var(--field);
-  border-color: var(--line);
+  background: transparent;
+  border-color: transparent;
   color: var(--ink);
 }
 

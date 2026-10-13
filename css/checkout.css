@@ -14,7 +14,6 @@
   border-radius: 3px;
   background: var(--surface-soft);
   color: var(--ink);
-  cursor: pointer;
   font:
     700 15px "Barlow Condensed",
     sans-serif;
@@ -116,13 +115,11 @@ html[data-theme="dark"] .checkout-page .product-icon img {
   font:
     700 13px "Barlow Condensed",
     sans-serif;
-  cursor: pointer;
 }
 .checkout-page .checkout-suki-scan-button:hover {
   background: #f7f6f0;
 }
 .checkout-page .checkout-suki-scan-button:disabled {
-  cursor: wait;
   opacity: 0.65;
 }
 .checkout-page .checkout-suki-scan-status {

@@ -8,14 +8,11 @@
         try {
           const key = "miniMartSettings";
           const saved = JSON.parse(localStorage.getItem(key) || "null");
-          const deviceTheme = matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light";
           const theme = saved?.theme === "dark" || saved?.theme === "light"
             ? saved.theme
-            : deviceTheme;
+            : "light";
           document.documentElement.dataset.theme = theme;
-          if (!saved || saved.theme === "system") {
+          if (!saved) {
             localStorage.setItem(key, JSON.stringify({ ...(saved || {}), theme }));
           }
         } catch (error) {

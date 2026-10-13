@@ -36,7 +36,7 @@ function deviceTheme() {
 function normalizeTheme(theme, hasSavedSettings) {
   if (theme === "dark" || theme === "light") return theme;
   if (theme === "system") return deviceTheme();
-  return hasSavedSettings ? defaultSettings.theme : deviceTheme();
+  return hasSavedSettings ? defaultSettings.theme : defaultSettings.theme;
 }
 
 function getSettings() {
@@ -45,7 +45,7 @@ function getSettings() {
     if (!stored) {
       const initialSettings = {
         ...cloneSettings(defaultSettings),
-        theme: deviceTheme(),
+        theme: defaultSettings.theme,
       };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(initialSettings));
       return initialSettings;

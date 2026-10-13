@@ -28,33 +28,125 @@ html[data-theme="dark"] {
   --field: #1b2621;
   --accent-glow: rgba(242, 86, 58, 0.3);
 }
+:root {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
 * {
   box-sizing: border-box;
 }
 body,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-p,
-span,
-label,
-button,
-.logo,
-.brand-text,
-.nav-item,
-.status-label,
-.stamp-progress {
+body * {
   cursor: default;
+}
+
+/* Shared interaction cursors */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+a[href],
+select,
+summary,
+input[type="checkbox"],
+input[type="radio"],
+label.settings-button-secondary[for],
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]),
+.product,
+.checkout-category,
+.category-group,
+.metric-action,
+.inventory-bar,
+.category-label,
+.category-chip,
+.category-management-name,
+.suki-card,
+.clear-search,
+.search-clear,
+.modal-close,
+.dialog-close,
+.settings-button-ghost {
+  cursor: pointer !important;
   user-select: none;
 }
-input,
-textarea,
-[contenteditable="true"] {
-  cursor: text;
+
+button *,
+[role="button"] *,
+a[href] *,
+.product *,
+.checkout-category *,
+.category-group *,
+.metric-action *,
+.suki-card * {
+  cursor: inherit !important;
+  user-select: none;
+}
+
+label.settings-button-secondary[for] * {
+  cursor: inherit !important;
+  user-select: none;
+}
+
+button *,
+[role="button"] *,
+a[href] *,
+.suki-card * {
+  pointer-events: none;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="tel"],
+input[type="number"],
+input[type="password"],
+input[type="url"],
+input[type="date"],
+textarea {
+  cursor: text !important;
   user-select: text;
+}
+
+input[readonly],
+textarea[readonly] {
+  cursor: default !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+  pointer-events: auto;
+}
+
+button:disabled,
+button:disabled *,
+input:disabled,
+select:disabled,
+textarea:disabled,
+[aria-disabled="true"],
+[aria-disabled="true"] *,
+.disabled,
+.disabled * {
+  cursor: not-allowed !important;
+}
+
+[aria-busy="true"],
+[aria-busy="true"] *,
+.is-busy,
+.is-busy * {
+  cursor: progress !important;
+}
+
+[draggable="true"] {
+  cursor: grab !important;
+}
+
+[draggable="true"]:active {
+  cursor: grabbing !important;
 }
 html,
 body {
@@ -71,6 +163,42 @@ input,
 select,
 textarea {
   color: var(--ink);
+  font: inherit;
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  min-height: 40px;
+  padding: 0 40px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background-color: var(--field);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%235b645e' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  color: var(--ink);
+}
+
+html[data-theme="dark"] select {
+  background-color: var(--field);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23c8d2cb' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+}
+
+html[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--ink);
+  box-shadow: 0 0 0 1000px var(--field) inset;
 }
 button:focus-visible,
 a:focus-visible,
@@ -237,7 +365,6 @@ html[data-theme="dark"] .category-label img {
 }
 .sidebar-logout {
   display: none;
-  cursor: pointer;
 }
 .mobile-logout {
   display: none;
@@ -253,7 +380,6 @@ nav button {
   background: transparent;
   padding: 0 0 10px;
   color: #59655c;
-  cursor: pointer;
   font:
     600 16px "Barlow Condensed",
     sans-serif;
@@ -264,7 +390,6 @@ nav a {
   padding: 0 0 10px;
   color: #59655c;
   text-decoration: none;
-  cursor: pointer;
   font:
     600 16px "Barlow Condensed",
     sans-serif;
@@ -317,10 +442,6 @@ nav a.active {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px 13px;
-}
-.product,
-.product * {
-  cursor: pointer;
 }
 .product {
   min-height: 109px;
@@ -465,7 +586,6 @@ nav a.active {
   padding: 9px 14px;
   background: var(--ink);
   color: var(--white);
-  cursor: pointer;
   font:
     600 14px "Barlow Condensed",
     sans-serif;
@@ -553,7 +673,6 @@ nav a.active {
 .row-actions button {
   border: 0;
   background: transparent;
-  cursor: pointer;
   font:
     12px "DM Mono",
     monospace;
@@ -608,7 +727,6 @@ nav a.active {
   border: 0;
   background: transparent;
   color: var(--muted);
-  cursor: pointer;
   font-size: 25px;
   line-height: 1;
 }
@@ -625,11 +743,11 @@ nav a.active {
   width: 100%;
   height: 39px;
   margin-top: 7px;
-  padding: 0 10px;
+  padding: 0 40px 0 10px;
   border: 1px solid #d5d2c7;
   border-radius: 3px;
   outline: none;
-  background: var(--white);
+  background-color: var(--white);
   color: var(--ink);
   font:
     14px Outfit,
@@ -656,7 +774,6 @@ nav a.active {
   border: 0;
   border-radius: 3px;
   padding: 10px 14px;
-  cursor: pointer;
   font:
     600 13px "Barlow Condensed",
     sans-serif;
@@ -699,7 +816,6 @@ nav a.active {
   border: 0;
   background: transparent;
   color: var(--muted);
-  cursor: pointer;
   margin-left: 8px;
 }
 .total {
@@ -724,7 +840,6 @@ nav a.active {
   border-radius: 3px;
   background: var(--red);
   color: var(--white);
-  cursor: pointer;
   font:
     700 16px "Barlow Condensed",
     sans-serif;
@@ -736,7 +851,6 @@ nav a.active {
 .sell-button:disabled {
   background: #c9c7be;
   color: #f5f4ee;
-  cursor: not-allowed;
 }
 .reports-page .workspace {
   padding-top: 20px;
@@ -954,7 +1068,6 @@ nav a.active {
     border-radius: 3px;
     background: var(--white);
     color: var(--ink);
-    cursor: pointer;
     font:
       600 13px "Barlow Condensed",
       sans-serif;
@@ -1005,10 +1118,4 @@ nav a.active {
 button,
 a {
   user-select: none;
-}
-input,
-textarea,
-[contenteditable="true"] {
-  cursor: text;
-  user-select: text;
 }

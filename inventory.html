@@ -9,7 +9,7 @@
           const saved = JSON.parse(localStorage.getItem("miniMartSettings") || "null");
           const theme = saved?.theme === "dark" || saved?.theme === "light"
             ? saved.theme
-            : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            : "light";
           document.documentElement.dataset.theme = theme;
         } catch (error) {
           document.documentElement.dataset.theme = "light";
