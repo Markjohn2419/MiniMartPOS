@@ -3,6 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        try {
+          const saved = JSON.parse(localStorage.getItem("miniMartSettings") || "null");
+          const theme = saved?.theme === "dark" || saved?.theme === "light"
+            ? saved.theme
+            : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          document.documentElement.dataset.theme = theme;
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
     <title>Mini Mart POS</title>
 
     <link rel="stylesheet" href="css/styles.css" />
@@ -45,6 +58,8 @@
 
             <a class="suki-link" href="suki-reward.html"> ♡ SUKI REWARDS </a>
 
+            <a href="settings.html"> ⚙ SETTINGS </a>
+
             <button class="mobile-logout" id="mobileLogoutButton" type="button">
               ↪ LOG OUT
             </button>
@@ -55,7 +70,7 @@
           ↪ LOG OUT
         </button>
 
-        <div class="date">Fri, Aug 21</div>
+        <div class="date" aria-label="Current date"></div>
       </header>
 
       <!-- =========================
@@ -192,6 +207,7 @@
 
     <!-- Authentication -->
     <script src="js/auth-client.js"></script>
+    <script src="js/settings-store.js"></script>
 
     <!-- Database -->
     <script src="js/database.js"></script>

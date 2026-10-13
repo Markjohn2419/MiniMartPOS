@@ -122,7 +122,7 @@ function escapeHtml(value) {
 }
 
 function formatPeso(value) {
-  return `₱${Number(value || 0).toFixed(2)}`;
+  return window.miniMartSettings.formatCurrency(value);
 }
 
 function formatDate(value) {

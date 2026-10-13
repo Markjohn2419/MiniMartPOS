@@ -22,11 +22,11 @@
   letter-spacing: 0.04em;
 }
 .inventory-page .create-category {
-  background: #e8e7df;
+  background: var(--surface-soft);
   color: var(--ink);
 }
 .inventory-page .create-category:hover {
-  background: #ddddd4;
+  background: var(--surface-raised);
 }
 .inventory-page .modal-backdrop {
   backdrop-filter: blur(2px);
@@ -62,7 +62,7 @@
 .inventory-page .category-group td {
   padding: 10px 12px 7px;
   border-top: 1px solid var(--line);
-  background: #f7f6f0;
+  background: var(--surface-soft);
   color: var(--ink);
   font:
     700 14px "Barlow Condensed",
@@ -73,7 +73,7 @@
 }
 .inventory-page .category-group:hover td,
 .inventory-page .category-group:focus-visible td {
-  background: #eeeee7;
+  background: var(--surface-raised);
 }
 .inventory-page .category-group:first-child td {
   border-top: 0;
@@ -94,6 +94,11 @@
   width: 13px;
   height: 13px;
   object-fit: contain;
+}
+html[data-theme="dark"] .inventory-page .category-group span img,
+html[data-theme="dark"] .inventory-page .category-label img,
+html[data-theme="dark"] .inventory-page .icon-option img {
+  filter: brightness(0) invert(1);
 }
 .inventory-page .category-group strong {
   font-weight: 700;
@@ -173,6 +178,22 @@
 .inventory-page .category-group[data-open="true"] b::after {
   content: "−";
   font-size: 18px;
+}
+
+html[data-theme="dark"] .inventory-page .category-group span {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-soft));
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
+html[data-theme="dark"] .inventory-page .icon-option {
+  background: var(--surface-soft);
+  border-color: var(--line);
+}
+
+html[data-theme="dark"] .inventory-page .icon-option:hover,
+html[data-theme="dark"] .inventory-page .icon-option.selected {
+  background: color-mix(in srgb, var(--blue) 16%, var(--surface-soft));
+  border-color: var(--blue);
 }
 @media (max-width: 650px) {
   .inventory-page .inventory-toolbar {

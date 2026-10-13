@@ -14,7 +14,7 @@ void (async () => {
 
 const cart = new Map();
 
-const peso = (value) => `&#8369;${Number(value).toFixed(2)}`;
+const peso = (value) => window.miniMartSettings.formatCurrency(value);
 
 const receiptDate = document.getElementById("receiptDate");
 
@@ -351,7 +351,7 @@ function updateSukiCheckoutInfo() {
     ${suki.stamps}/${MAX_STAMPS}
     <br>
     Reward balance:
-    ₱${Number(suki.rewardBalance).toFixed(2)}
+    ${window.miniMartSettings.formatCurrency(suki.rewardBalance)}
   `;
 
   controls.hidden = suki.rewardBalance <= 0 || suki.stamps < MAX_STAMPS;
@@ -512,6 +512,8 @@ function addToCart() {
   const name = this.dataset.name;
 
   const stock = Number(this.dataset.stock);
+  const blockOutOfStockSales =
+    window.miniMartSettings.get().blockOutOfStockSales !== false;
 
   const item = cart.get(name) || {
     name,
@@ -519,7 +521,12 @@ function addToCart() {
     quantity: 0,
   };
 
-  if (item.quantity >= stock) {
+  if (blockOutOfStockSales && item.quantity >= stock) {
+    showCheckoutToast(
+      stock === 0
+        ? "This product is out of stock and cannot be sold."
+        : `Only ${stock} unit${stock === 1 ? "" : "s"} available.`,
+    );
     return;
   }
 

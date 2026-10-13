@@ -3,6 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        try {
+          const saved = JSON.parse(localStorage.getItem("miniMartSettings") || "null");
+          const theme = saved?.theme === "dark" || saved?.theme === "light"
+            ? saved.theme
+            : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          document.documentElement.dataset.theme = theme;
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
     <title>Reports | Mini Mart POS</title>
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/reports.css" />
@@ -33,6 +46,7 @@
             <a href="inventory.html">◈ INVENTORY</a>
             <a class="active" href="reports.html">▥ REPORTS</a>
             <a class="suki-link" href="suki-reward.html">♡ SUKI REWARDS</a>
+            <a href="settings.html">⚙ SETTINGS</a>
             <button class="mobile-logout" id="mobileLogoutButton" type="button">
               ↪ LOG OUT
             </button>
@@ -161,8 +175,8 @@
             <div class="bar-legend">
               <span><i class="legend-category"></i> Category total stock</span
               ><span
-                ><i class="legend-threshold"></i> Low-stock threshold (10
-                units)</span
+                ><i class="legend-threshold"></i> Low-stock threshold (configured
+                in Settings)</span
               >
             </div>
           </article>
@@ -305,6 +319,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/auth-client.js"></script>
+    <script src="js/settings-store.js"></script>
     <script src="js/database.js"></script>
     <script src="js/reports.js"></script>
     <script src="js/navigation.js"></script>

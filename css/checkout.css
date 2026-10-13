@@ -12,7 +12,7 @@
   border: 1px solid var(--line);
   border-left: 4px solid var(--accent);
   border-radius: 3px;
-  background: #f7f6f0;
+  background: var(--surface-soft);
   color: var(--ink);
   cursor: pointer;
   font:
@@ -23,7 +23,7 @@
 }
 .checkout-page .checkout-category:hover,
 .checkout-page .checkout-category:focus-visible {
-  background: #eeeee7;
+  background: var(--surface-raised);
   outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
   outline-offset: 1px;
 }
@@ -55,6 +55,17 @@
     monospace;
   letter-spacing: 0;
   text-transform: none;
+}
+html[data-theme="dark"] .checkout-page .checkout-category {
+  color: var(--ink);
+  background: var(--surface-soft);
+}
+html[data-theme="dark"] .checkout-page .checkout-category small {
+  color: var(--muted);
+}
+html[data-theme="dark"] .checkout-page .checkout-category img,
+html[data-theme="dark"] .checkout-page .product-icon img {
+  filter: brightness(0) invert(1);
 }
 .checkout-page .checkout-category b {
   margin-left: auto;
@@ -164,7 +175,7 @@
   height: 36px;
   border: 1px solid #d5d2c7;
   border-radius: 3px;
-  background: var(--white);
+  background: var(--field);
 }
 .checkout-page .payment-input-wrap:focus-within {
   border-color: var(--blue);
@@ -217,4 +228,36 @@
 }
 .checkout-page .sell-button {
   min-height: 42px;
+}
+
+html[data-theme="dark"] .checkout-page .category-toggle,
+html[data-theme="dark"] .checkout-page .product-icon {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-soft));
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .checkout-page .checkout-suki-scan-button:hover {
+  background: var(--surface-raised);
+}
+
+html[data-theme="dark"] .checkout-page .payment-input-wrap {
+  border-color: var(--line);
+}
+html[data-theme="dark"] .checkout-page .receipt {
+  background: var(--white);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+}
+html[data-theme="dark"] .checkout-page .receipt-date {
+  color: #82c8e3;
+}
+html[data-theme="dark"] .checkout-page .sell-button:disabled {
+  background: #4b5750;
+  color: #d9e0da;
+  opacity: 0.7;
+}
+html[data-theme="dark"] .checkout-page .sell-button:not(:disabled) {
+  background: var(--red);
+  color: #fffaf7;
+  box-shadow: 0 0 18px var(--accent-glow);
 }

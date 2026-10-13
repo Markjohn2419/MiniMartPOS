@@ -13,6 +13,13 @@
   --login-display: "Baloo 2", "Trebuchet MS", sans-serif;
   --login-body: "Work Sans", "Segoe UI", sans-serif;
 }
+html[data-theme="dark"] {
+  --login-paper: #18211d;
+  --login-edge: #46534b;
+  --login-ink: #f2f4ed;
+  --login-muted: #b5c0b8;
+  --login-shadow: 0 5px 14px rgba(0, 0, 0, 0.25);
+}
 * {
   box-sizing: border-box;
 }

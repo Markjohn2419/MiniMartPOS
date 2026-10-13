@@ -6,6 +6,55 @@
   background: #f5f7fb;
 }
 
+html[data-theme="dark"] .suki-page {
+  background: #18211d;
+  color: #f2f4ed;
+}
+
+html[data-theme="dark"] .suki-page .suki-heading,
+html[data-theme="dark"] .suki-page h1,
+html[data-theme="dark"] .suki-page h2,
+html[data-theme="dark"] .suki-page h3,
+html[data-theme="dark"] .suki-page strong {
+  color: #f2f4ed;
+}
+
+html[data-theme="dark"] .suki-page .nfc-reader-card,
+html[data-theme="dark"] .suki-page .suki-list-item,
+html[data-theme="dark"] .suki-page .suki-modal-content {
+  background: #222d27;
+  border-color: #46534b;
+  color: #f2f4ed;
+}
+
+html[data-theme="dark"] .suki-page .suki-tab,
+html[data-theme="dark"] .suki-page p,
+html[data-theme="dark"] .suki-page small,
+html[data-theme="dark"] .suki-page label {
+  color: #b5c0b8;
+}
+
+html[data-theme="dark"] .suki-page input,
+html[data-theme="dark"] .suki-page select,
+html[data-theme="dark"] .suki-page textarea {
+  background: #222d27;
+  border-color: #46534b;
+  color: #f2f4ed;
+}
+
+html[data-theme="dark"] .suki-page .suki-tabs,
+html[data-theme="dark"] .suki-page .suki-list-item,
+html[data-theme="dark"] .suki-page .suki-modal {
+  border-color: #46534b;
+}
+
+html[data-theme="dark"] .suki-page .add-suki-button,
+html[data-theme="dark"] .suki-page .nfc-button,
+html[data-theme="dark"] .suki-page .primary-nfc-button,
+html[data-theme="dark"] .suki-page .save-button {
+  box-shadow: 0 0 18px rgba(40, 100, 232, 0.3);
+}
+
 .suki-content {
   width: min(1100px, calc(100% - 40px));
   margin: 0 auto;
@@ -538,6 +587,42 @@
   border-color: #c5d3eb;
 
   box-shadow: 0 8px 22px rgba(34, 55, 90, 0.08);
+}
+
+html[data-theme="dark"] .suki-page .nfc-browser-warning,
+html[data-theme="dark"] .suki-page .nfc-card-result,
+html[data-theme="dark"] .suki-page .suki-card,
+html[data-theme="dark"] .suki-page .empty-results,
+html[data-theme="dark"] .suki-page .suki-toast,
+html[data-theme="dark"] .suki-page .suki-dialog,
+html[data-theme="dark"] .suki-page .card-id-display {
+  background: var(--surface-raised);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .nfc-browser-warning {
+  background: color-mix(in srgb, var(--red) 12%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--red) 38%, transparent);
+}
+
+html[data-theme="dark"] .suki-page .suki-card:hover {
+  background: color-mix(in srgb, var(--blue) 10%, var(--surface-raised));
+  border-color: var(--blue);
+}
+
+html[data-theme="dark"] .suki-page .suki-card strong,
+html[data-theme="dark"] .suki-page .nfc-card-result strong,
+html[data-theme="dark"] .suki-page .suki-dialog h2,
+html[data-theme="dark"] .suki-page .suki-dialog h3 {
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .suki-card small,
+html[data-theme="dark"] .suki-page .nfc-card-result p,
+html[data-theme="dark"] .suki-page .empty-results,
+html[data-theme="dark"] .suki-page .suki-toast {
+  color: var(--muted);
 }
 
 .suki-card > div:first-child {
@@ -1673,6 +1758,109 @@
 
 .suki-action-button.danger:hover {
   background: #ffe3e1;
+}
+
+html[data-theme="dark"] .suki-page {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .nfc-reader-card,
+html[data-theme="dark"] .suki-page .nfc-card-result,
+html[data-theme="dark"] .suki-page .suki-card,
+html[data-theme="dark"] .suki-page .empty-results,
+html[data-theme="dark"] .suki-page .suki-toast,
+html[data-theme="dark"] .suki-page .suki-dialog,
+html[data-theme="dark"] .suki-page .nfc-link-box,
+html[data-theme="dark"] .suki-page .card-id-display,
+html[data-theme="dark"] .suki-page .suki-info-section,
+html[data-theme="dark"] .suki-page .suki-reward-section,
+html[data-theme="dark"] .suki-page .suki-history-section,
+html[data-theme="dark"] .suki-page .suki-nfc-card,
+html[data-theme="dark"] .suki-page .suki-progress-box,
+html[data-theme="dark"] .suki-page .suki-history-item,
+html[data-theme="dark"] .suki-page .suki-empty-history {
+  background: var(--surface-raised);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .nfc-browser-warning {
+  background: color-mix(in srgb, var(--red) 12%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--red) 38%, transparent);
+  color: #ffd2c8;
+}
+
+html[data-theme="dark"] .suki-page .suki-card:hover,
+html[data-theme="dark"] .suki-page .suki-history-item:hover {
+  background: color-mix(in srgb, var(--blue) 10%, var(--surface-raised));
+  border-color: var(--blue);
+}
+
+html[data-theme="dark"] .suki-page .field-label input,
+html[data-theme="dark"] .suki-page .suki-search input {
+  background: var(--field);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .suki-card strong,
+html[data-theme="dark"] .suki-page .nfc-card-result strong,
+html[data-theme="dark"] .suki-page .suki-dialog h2,
+html[data-theme="dark"] .suki-page .suki-dialog h3,
+html[data-theme="dark"] .suki-page .suki-info-item strong,
+html[data-theme="dark"] .suki-page .suki-history-main strong {
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .suki-card small,
+html[data-theme="dark"] .suki-page .nfc-card-result p,
+html[data-theme="dark"] .suki-page .empty-results,
+html[data-theme="dark"] .suki-page .suki-toast,
+html[data-theme="dark"] .suki-page .suki-info-label,
+html[data-theme="dark"] .suki-page .suki-history-main span,
+html[data-theme="dark"] .suki-page .suki-history-details span {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .suki-page .cancel-button,
+html[data-theme="dark"] .suki-page .secondary-button,
+html[data-theme="dark"] .suki-page .suki-action-button.secondary {
+  background: var(--surface-soft);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .suki-section-icon,
+html[data-theme="dark"] .suki-page .suki-nfc-card,
+html[data-theme="dark"] .suki-page .suki-info-item,
+html[data-theme="dark"] .suki-page .suki-reward-stat,
+html[data-theme="dark"] .suki-page .suki-progress-box,
+html[data-theme="dark"] .suki-page .suki-history-details span,
+html[data-theme="dark"] .suki-page .suki-empty-icon {
+  background: var(--surface-soft);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .suki-reward-stat strong,
+html[data-theme="dark"] .suki-page .suki-history-main strong,
+html[data-theme="dark"] .suki-page .suki-history-details strong,
+html[data-theme="dark"] .suki-page .suki-empty-history strong {
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .suki-reward-stat span,
+html[data-theme="dark"] .suki-page .suki-reward-stat small,
+html[data-theme="dark"] .suki-page .suki-history-details span,
+html[data-theme="dark"] .suki-page .suki-empty-history p {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .suki-page .suki-action-button.secondary:hover,
+html[data-theme="dark"] .suki-page .suki-action-button.danger:hover {
+  background: color-mix(in srgb, var(--red) 14%, var(--surface-soft));
+  color: #ffd2c8;
 }
 
 /* =========================================================

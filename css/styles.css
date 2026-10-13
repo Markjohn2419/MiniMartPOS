@@ -11,6 +11,22 @@
   --gold: #e6ad35;
   --green: #277255;
   --shadow: 0 5px 14px rgba(25, 35, 29, 0.05);
+  --surface-raised: #fffefb;
+  --surface-soft: #f7f6f0;
+  --field: #fffefb;
+  --accent-glow: rgba(210, 55, 32, 0.18);
+}
+html[data-theme="dark"] {
+  --paper: #111916;
+  --white: #202b25;
+  --ink: #f2f4ed;
+  --muted: #b5c0b8;
+  --line: #46534b;
+  --shadow: 0 5px 14px rgba(0, 0, 0, 0.25);
+  --surface-raised: #2b3831;
+  --surface-soft: #26332d;
+  --field: #1b2621;
+  --accent-glow: rgba(242, 86, 58, 0.3);
 }
 * {
   box-sizing: border-box;
@@ -40,11 +56,30 @@ textarea,
   cursor: text;
   user-select: text;
 }
+html,
+body {
+  overflow-x: hidden;
+}
 body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
   font-family: Outfit, sans-serif;
+}
+button,
+input,
+select,
+textarea {
+  color: var(--ink);
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-glow);
 }
 body::before {
   content: "";
@@ -89,6 +124,11 @@ header {
   object-fit: contain;
   filter: brightness(0) invert(1);
 }
+html[data-theme="dark"] .brand-mark img,
+html[data-theme="dark"] .checkout-page img,
+html[data-theme="dark"] .inventory-page img {
+  filter: brightness(0) invert(1);
+}
 .eyebrow,
 .category,
 .date,
@@ -110,9 +150,90 @@ h1 {
   line-height: 1;
 }
 .date {
-  color: #4d5c52;
+  color: var(--muted);
   font-size: 11px;
   padding-top: 24px;
+}
+
+html[data-theme="dark"] body {
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] nav a,
+html[data-theme="dark"] nav button {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .date,
+html[data-theme="dark"] .search-wrap span {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .inventory-table-wrap,
+html[data-theme="dark"] .receipt,
+html[data-theme="dark"] .product,
+html[data-theme="dark"] .modal-backdrop .product-modal,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .report-panel,
+html[data-theme="dark"] .metric-card {
+  background: var(--white);
+  color: var(--ink);
+  border-color: var(--line);
+}
+html[data-theme="dark"] .brand-mark {
+  background: #0b100e;
+}
+
+html[data-theme="dark"] .inventory-table th,
+html[data-theme="dark"] .report-livebar,
+html[data-theme="dark"] .bar-legend,
+html[data-theme="dark"] .mobile-menu-button,
+html[data-theme="dark"] header nav {
+  background: var(--paper);
+  color: var(--muted);
+  border-color: var(--line);
+}
+html[data-theme="dark"] .sell-button:not(:disabled),
+html[data-theme="dark"] .settings-actions button,
+html[data-theme="dark"] .add-product,
+html[data-theme="dark"] .modal-save {
+  box-shadow: 0 0 0 1px rgba(242, 86, 58, 0.35),
+    0 0 18px var(--accent-glow);
+}
+
+html[data-theme="dark"] .sidebar-logout {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .inventory-table-wrap,
+html[data-theme="dark"] .receipt,
+html[data-theme="dark"] .report-panel,
+html[data-theme="dark"] .metric-card {
+  border-color: var(--line);
+}
+
+html[data-theme="dark"] .settings-card small,
+html[data-theme="dark"] .settings-heading p,
+html[data-theme="dark"] .settings-fields label {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .product-icon,
+html[data-theme="dark"] .category-label,
+html[data-theme="dark"] .data-icon,
+html[data-theme="dark"] .panel-icon {
+  background: color-mix(in srgb, var(--accent, var(--blue)) 18%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--accent, var(--blue)) 38%, transparent);
+}
+
+html[data-theme="dark"] .product-icon img,
+html[data-theme="dark"] .category-label img {
+  filter: brightness(0) invert(1);
 }
 .sidebar-logout {
   display: none;

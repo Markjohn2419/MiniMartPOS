@@ -9,13 +9,17 @@ void (async () => {
   }
 })();
 
-const peso = (value) => `&#8369;${value.toFixed(2)}`;
+const peso = (value) => window.miniMartSettings.formatCurrency(value);
 const products = window.miniMartDB.products();
 const sales = window.miniMartDB.sales();
 const itemCounts = new Map();
 const categoryCounts = new Map();
 const lastUpdated = document.getElementById("lastUpdated");
-const LOW_STOCK_THRESHOLD = 10;
+const LOW_STOCK_THRESHOLD = Number.isInteger(
+  Number(window.miniMartSettings?.get().lowStockThreshold),
+)
+  ? Number(window.miniMartSettings.get().lowStockThreshold)
+  : 10;
 const lowStockProductNames = new Set(
   products
     .filter((product) => product.stock <= LOW_STOCK_THRESHOLD)
@@ -188,7 +192,7 @@ document.getElementById("lowStockList").innerHTML =
   lowStockProducts
     .map(
       (product) =>
-        `<div class="low-stock-row"><span><strong>${product.name}</strong><small>${product.category} · ${product.price.toFixed(2)} per unit</small></span><b class="low-stock-amount">${product.stock} left</b></div>`,
+        `<div class="low-stock-row"><span><strong>${product.name}</strong><small>${product.category} · ${peso(product.price)} per unit</small></span><b class="low-stock-amount">${product.stock} left</b></div>`,
     )
     .join("") ||
   '<div class="low-stock-empty">All products have healthy stock levels.</div>';
@@ -506,7 +510,7 @@ const highlightLowStockCategory = (category) => {
     .sort((first, second) => first.stock - second.stock)
     .map(
       (product) =>
-        `<div class="low-stock-row"><span><strong>${product.name}</strong><small>${product.category} · ${product.price.toFixed(2)} per unit</small></span><b class="low-stock-amount">${product.stock} left</b></div>`,
+        `<div class="low-stock-row"><span><strong>${product.name}</strong><small>${product.category} · ${peso(product.price)} per unit</small></span><b class="low-stock-amount">${product.stock} left</b></div>`,
     )
     .join("");
   document.getElementById("lowStockTitle").textContent =

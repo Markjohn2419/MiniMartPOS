@@ -1,15 +1,33 @@
+const settingsApi = window.miniMartSettings;
 const mobileMenuButton = document.querySelector(".mobile-menu-button");
 const mainNavigation = document.getElementById("mainNavigation");
 const logoutButton = document.getElementById("logoutButton");
 const mobileLogoutButton = document.getElementById("mobileLogoutButton");
+const settings = settingsApi ? settingsApi.get() : {};
+
+settingsApi?.applyTheme(settings);
 
 document.querySelectorAll(".date").forEach((element) => {
-  element.textContent = new Date().toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  element.textContent = settingsApi
+    ? settingsApi.formatDate(new Date(), settings)
+    : new Date().toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
 });
+
+document.querySelectorAll(".brand h1").forEach((element) => {
+  element.textContent = settings.storeName || "Mini Mart";
+});
+document.querySelectorAll(".brand .eyebrow").forEach((element) => {
+  element.textContent = settings.registerName || "REGISTER 01";
+});
+if (settings.logoDataUrl && settingsApi?.isValidLogoDataUrl(settings.logoDataUrl)) {
+  document.querySelectorAll(".brand-mark img").forEach((image) => {
+    image.src = settings.logoDataUrl;
+  });
+}
 
 if (mobileMenuButton && mainNavigation) {
   mobileMenuButton.addEventListener("click", () => {

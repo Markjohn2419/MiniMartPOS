@@ -81,7 +81,7 @@ function renderRows() {
       const productRows = categoryProducts
         .map(
           (product) =>
-            `<tr data-product="${product.name}" data-category="${product.category}"><td>${product.name}</td><td><span class="category-label" style="--accent:${categoryAccent(product.category)}"><img src="${categoryIconPath(product.category)}" alt="" />${product.category}</span></td><td class="inventory-price">${window.miniMartDB.isKnownCost(product.costPrice) ? `&#8369;${Number(product.costPrice).toFixed(2)}` : "—"}</td><td class="inventory-price">&#8369;${product.price.toFixed(2)}</td><td class="inventory-stock">${product.stock}</td><td class="row-actions"><button class="edit-action" type="button">♢ Edit</button><button class="delete-action" type="button">♧ Delete</button></td></tr>`,
+            `<tr data-product="${product.name}" data-category="${product.category}"><td>${product.name}</td><td><span class="category-label" style="--accent:${categoryAccent(product.category)}"><img src="${categoryIconPath(product.category)}" alt="" />${product.category}</span></td><td class="inventory-price">${window.miniMartDB.isKnownCost(product.costPrice) ? window.miniMartSettings.formatCurrency(product.costPrice) : "—"}</td><td class="inventory-price">${window.miniMartSettings.formatCurrency(product.price)}</td><td class="inventory-stock">${product.stock}</td><td class="row-actions"><button class="edit-action" type="button">♢ Edit</button><button class="delete-action" type="button">♧ Delete</button></td></tr>`,
         )
         .join("");
       return header + productRows;

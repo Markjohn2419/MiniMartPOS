@@ -50,7 +50,7 @@
 .reports-page .metric-card,
 .reports-page .report-panel {
   background: var(--white);
-  border: 1px solid #d8d5ca;
+  border: 1px solid var(--line);
   border-radius: 4px;
   box-shadow: var(--shadow);
 }
@@ -739,7 +739,7 @@
 }
 .reports-page .report-list li:hover {
   padding-left: 4px;
-  background: #faf9f4;
+  background: var(--surface-soft);
 }
 .reports-page .report-list li:last-child {
   border-bottom: 0;
@@ -756,7 +756,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #eef3f1;
+  background: var(--surface-soft);
   color: var(--blue);
   font:
     10px "DM Mono",
@@ -789,7 +789,7 @@
   height: 6px;
   overflow: hidden;
   border-radius: 4px;
-  background: #e3e8e5;
+  background: var(--line);
 }
 .reports-page .product-meter i {
   display: block;
@@ -942,6 +942,8 @@
 .reports-page .profit-table-panel {
   grid-column: 1 / -1;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 .reports-page .profit-table-wrap {
   overflow-x: auto;
@@ -1155,6 +1157,56 @@
   to {
     stroke-dashoffset: 0;
   }
+}
+
+html[data-theme="dark"] .reports-page .data-icon {
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-soft));
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  color: var(--accent);
+}
+
+html[data-theme="dark"] .reports-page .panel-icon {
+  background: color-mix(in srgb, var(--blue) 16%, var(--surface-soft));
+  border: 1px solid color-mix(in srgb, var(--blue) 35%, transparent);
+}
+
+html[data-theme="dark"] .reports-page .period-tooltip,
+html[data-theme="dark"] .reports-page .low-stock-dialog {
+  background: var(--surface-raised);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .reports-page .donut-label {
+  border-color: var(--line);
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .reports-page .report-list li:hover,
+html[data-theme="dark"] .reports-page .profit-table tbody tr:hover {
+  background: color-mix(in srgb, var(--blue) 10%, var(--surface-raised));
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .reports-page .profit-table tbody tr:hover td,
+html[data-theme="dark"] .reports-page .report-list li:hover .product-name,
+html[data-theme="dark"] .reports-page .report-list li:hover .report-quantity {
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .reports-page .profit-table th button,
+html[data-theme="dark"] .reports-page .low-stock-actions button {
+  background: var(--surface-soft);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+html[data-theme="dark"] .reports-page .chart-header,
+html[data-theme="dark"] .reports-page .profit-table thead th {
+  background: var(--surface-soft);
+  color: var(--muted);
 }
 @keyframes fade-area {
   to {
