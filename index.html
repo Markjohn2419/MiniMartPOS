@@ -107,6 +107,46 @@
           <div class="empty-results" id="emptyResults">No products found.</div>
         </section>
 
+        <div class="measure-modal" id="measureModal" hidden>
+          <section
+            class="measure-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="measureTitle"
+          >
+            <div class="measure-dialog-header">
+              <div>
+                <div class="eyebrow">MEASURED PRODUCT</div>
+                <h2 id="measureTitle">Sell by weight</h2>
+                <p id="measureProductSummary"></p>
+              </div>
+              <button id="closeMeasureModal" class="measure-close" type="button" aria-label="Close sell by weight">×</button>
+            </div>
+            <p class="measure-stock" id="measureStock"></p>
+            <div class="measure-mode" role="group" aria-label="Selling mode">
+              <button type="button" class="measure-mode-button is-active" data-measure-mode="quantity">By weight</button>
+              <button type="button" class="measure-mode-button" data-measure-mode="amount">By amount</button>
+            </div>
+            <label class="measure-input-label" for="measureValue" id="measureInputLabel">Quantity</label>
+            <div class="measure-input-wrap">
+              <span id="measureInputPrefix"></span>
+              <input id="measureValue" type="text" inputmode="decimal" autocomplete="off" />
+              <span id="measureInputUnit"></span>
+            </div>
+            <p class="measure-error" id="measureError" role="alert" hidden></p>
+            <p class="measure-warning" id="measureWarning" role="status" hidden></p>
+            <div class="measure-result">
+              <span id="measureResultLabel">Price</span>
+              <strong id="measureResult"></strong>
+            </div>
+            <div class="measure-quick-picks" id="measureQuickPicks"></div>
+            <div class="measure-actions">
+              <button type="button" class="measure-cancel" id="cancelMeasureModal">CANCEL</button>
+              <button type="button" class="measure-add" id="addMeasuredToCart">ADD TO CART</button>
+            </div>
+          </section>
+        </div>
+
         <!-- =========================
              RECEIPT / CART
         ========================== -->

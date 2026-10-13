@@ -1105,7 +1105,14 @@ function renderCategorySummary(categories = getManagedCategories()) {
     icon.alt = "";
     const name = document.createElement("span");
     name.textContent = category;
+    const unit = window.miniMartDB.categoryDefaultUnit(category);
     chip.append(icon, name);
+    if (unit !== "piece") {
+      const unitTag = document.createElement("small");
+      unitTag.className = "category-summary-unit";
+      unitTag.textContent = window.miniMartDB.units()[unit].shortLabel;
+      chip.append(unitTag);
+    }
     categorySummaryChips.append(chip);
   });
   if (categories.length > 6) {
@@ -1154,9 +1161,32 @@ function renderCategoryManagement() {
     const count = document.createElement("small");
     count.className = "category-management-count";
     count.textContent = `${productsCount} product${productsCount === 1 ? "" : "s"}`;
+    const currentUnit = window.miniMartDB.categoryDefaultUnit(category);
+    const unitTag = document.createElement("small");
+    unitTag.className = "category-management-unit-tag";
+    unitTag.textContent = currentUnit === "piece"
+      ? ""
+      : window.miniMartDB.units()[currentUnit].shortLabel;
     const details = document.createElement("span");
     details.className = "category-management-details";
-    details.append(name, count);
+    const unit = document.createElement("select");
+    unit.className = "category-management-unit";
+    unit.setAttribute("aria-label", `Default unit for ${category}`);
+    Object.entries(window.miniMartDB.units()).forEach(([value, rule]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = `${rule.label} (${rule.shortLabel})`;
+      option.selected = value === currentUnit;
+      unit.append(option);
+    });
+    unit.addEventListener("change", () => {
+      window.miniMartDB.saveCategoryDefaultUnit(category, unit.value);
+      unitTag.textContent = unit.value === "piece"
+        ? ""
+        : window.miniMartDB.units()[unit.value].shortLabel;
+      setCategoryStatus("Saved");
+    });
+    details.append(name, count, unitTag, unit);
     const main = document.createElement("div");
     main.className = "category-management-main";
     main.append(icon, details);

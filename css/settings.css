@@ -307,6 +307,24 @@
   gap: 8px;
 }
 
+.category-management-details {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-management-unit {
+  min-height: 32px;
+  max-width: 140px;
+  padding: 0 30px 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background-color: var(--field);
+  color: var(--ink);
+  font: 11px Outfit, sans-serif;
+}
+
 .category-management-icon {
   width: 22px;
   height: 22px;
@@ -351,6 +369,22 @@
   color: var(--muted);
   font: 10px "DM Mono", monospace;
   white-space: nowrap;
+}
+
+.category-management-unit-tag {
+  width: fit-content;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--red) 38%, transparent);
+  border-radius: 99px;
+  color: var(--red);
+  font: 9px "DM Mono", monospace;
+}
+
+.category-management-unit-help {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .category-management-actions {
@@ -551,6 +585,9 @@ html[data-theme="dark"] .settings-dialog .dialog-close {
 }
 
 @media (max-width: 650px) {
+  .category-management-unit {
+    min-height: 44px;
+  }
   .category-settings-header {
     align-items: flex-start;
     flex-direction: column;
@@ -732,6 +769,11 @@ html[data-theme="dark"] .settings-page .theme-toggle {
 .category-summary-more {
   padding-left: 8px;
   color: var(--muted);
+}
+
+.category-summary-unit {
+  color: var(--red);
+  font: 10px "DM Mono", monospace;
 }
 
 .category-management-modal {

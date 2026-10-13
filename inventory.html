@@ -238,7 +238,7 @@
             ×
           </button>
         </div>
-        <form id="categoryForm">
+        <form id="categoryForm" novalidate>
           <label
             >Category name<input
               id="categoryName"
@@ -247,37 +247,73 @@
               placeholder="e.g. Bakery"
               required
           /></label>
+          <small class="field-error category-error" id="categoryNameError"></small>
           <datalist id="categoryOptions"></datalist>
+          <label id="categoryUnitField"
+            >Unit<select id="categoryDefaultUnit" aria-describedby="categoryUnitHelp">
+              <option value="piece">Piece (pc)</option>
+              <option value="kg">Kilogram (kg)</option>
+              <option value="g">Gram (g)</option>
+              <option value="L">Liter (L)</option>
+              <option value="mL">Milliliter (mL)</option>
+              <option value="pack">Pack</option>
+            </select>
+            <small id="categoryUnitHelp" class="field-help">Products in this category will use this unit. You can change it per product later.</small>
+          </label>
           <div id="productFields">
             <label
-              >Product name<input id="productName" type="text" required
-            /></label>
+              >Product name<input id="productName" type="text" required />
+              <small class="field-error" id="productNameError"></small>
+            </label>
             <div class="modal-fields">
               <label
-                >Cost Price (&#8369;)<input
+                ><span id="productCostLabel">Cost per piece (&#8369;)</span><input
                   id="productCost"
                   type="number"
                   min="0"
                   step="0.01"
                   required
-              /></label>
+                />
+                <small class="field-error" id="productCostError"></small>
+              </label>
               <label
-                >Sell Price (&#8369;)<input
+                ><span id="productPriceLabel">Sell Price (&#8369;)</span><input
                   id="productPrice"
                   type="number"
                   min="0"
                   step="0.01"
                   required
-              /></label>
+                />
+                <small class="field-error" id="productPriceError"></small>
+              </label>
               <label
-                >Stock<input
+                ><span id="productStockLabel">Stock (pcs)</span><input
                   id="productStock"
                   type="number"
                   min="0"
                   step="1"
                   required
-              /></label>
+                />
+                <small class="input-suffix" id="stockSuffix">pc</small>
+                <small class="field-error" id="productStockError"></small>
+              </label>
+              <label
+                ><span>Unit</span
+                ><select id="productUnit">
+                  <option value="piece">Piece (pc)</option>
+                  <option value="kg">Kilogram (kg)</option>
+                  <option value="g">Gram (g)</option>
+                  <option value="L">Liter (L)</option>
+                  <option value="mL">Milliliter (mL)</option>
+                  <option value="pack">Pack</option>
+                </select>
+              </label>
             </div>
+            <p class="field-warning" id="lossWarning" hidden>You would sell at a loss. Confirm to continue.</p>
+            <label class="loss-confirm" id="lossConfirmField" hidden>
+              <input id="lossConfirm" type="checkbox" />
+              <span>I understand this product will sell below cost.</span>
+            </label>
           </div>
           <div class="category-icon-picker" id="categoryIconPicker">
             <span class="picker-label">Category icon</span>
@@ -289,6 +325,24 @@
                 aria-label="Beverages icon"
               >
                 <img src="Icons/beverages.png" alt="" />
+              </button>
+              <button type="button" class="icon-option" data-icon="Icons/grains-rice.svg" aria-label="Grains and rice icon">
+                <img src="Icons/grains-rice.svg" alt="" />
+              </button>
+              <button type="button" class="icon-option" data-icon="Icons/cooking-oil.svg" aria-label="Cooking oil icon">
+                <img src="Icons/cooking-oil.svg" alt="" />
+              </button>
+              <button type="button" class="icon-option" data-icon="Icons/vegetables.svg" aria-label="Vegetables icon">
+                <img src="Icons/vegetables.svg" alt="" />
+              </button>
+              <button type="button" class="icon-option" data-icon="Icons/meat-fish.svg" aria-label="Meat and fish icon">
+                <img src="Icons/meat-fish.svg" alt="" />
+              </button>
+              <button type="button" class="icon-option" data-icon="Icons/household.svg" aria-label="Household icon">
+                <img src="Icons/household.svg" alt="" />
+              </button>
+              <button type="button" class="icon-option" data-icon="Icons/toiletries.svg" aria-label="Toiletries icon">
+                <img src="Icons/toiletries.svg" alt="" />
               </button>
               <button
                 type="button"

@@ -33,6 +33,206 @@ const paymentError = document.getElementById("paymentError");
 const productsSection = document.getElementById("products");
 
 let productCards = [];
+let measuredProduct = null;
+let measuredEditName = null;
+let measuredMode = "quantity";
+let saleInProgress = false;
+let measureReturnFocus = null;
+
+const measureModal = document.getElementById("measureModal");
+const measureValue = document.getElementById("measureValue");
+const measureInputLabel = document.getElementById("measureInputLabel");
+const measureInputPrefix = document.getElementById("measureInputPrefix");
+const measureInputUnit = document.getElementById("measureInputUnit");
+const measureProductSummary = document.getElementById("measureProductSummary");
+const measureStock = document.getElementById("measureStock");
+const measureResultLabel = document.getElementById("measureResultLabel");
+const measureResult = document.getElementById("measureResult");
+const measureError = document.getElementById("measureError");
+const measureWarning = document.getElementById("measureWarning");
+const measureQuickPicks = document.getElementById("measureQuickPicks");
+const addMeasuredToCart = document.getElementById("addMeasuredToCart");
+
+function measuredUnit(unit) {
+  return ["kg", "g", "L", "mL"].includes(
+    window.miniMartDB.normalizeUnit(unit),
+  );
+}
+
+function unitText(unit) {
+  return window.miniMartDB.units()[unit]?.shortLabel || unit;
+}
+
+function parseMeasureValue(value) {
+  const text = String(value || "").trim().replace(",", ".");
+  if (!/^\d+(?:\.\d+)?$/.test(text)) {
+    return null;
+  }
+  const number = Number(text);
+  return Number.isFinite(number) ? number : null;
+}
+
+function floorQuantity(value, unit) {
+  const decimals = window.miniMartDB.unitDecimals(unit);
+  const scale = 10 ** decimals;
+  return Math.floor((value + Number.EPSILON) * scale) / scale;
+}
+
+function closeMeasureModal() {
+  measureModal.hidden = true;
+  measuredProduct = null;
+  measuredEditName = null;
+  measureValue.value = "";
+  measureReturnFocus?.focus();
+  measureReturnFocus = null;
+}
+
+function setMeasureMode(mode) {
+  measuredMode = mode;
+  document.querySelectorAll("[data-measure-mode]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.measureMode === mode);
+  });
+  measureInputLabel.textContent = mode === "amount" ? "Amount" : "Quantity";
+  measureInputPrefix.textContent = mode === "amount" ? "₱" : "";
+  measureInputUnit.textContent =
+    mode === "amount" ? "" : unitText(measuredProduct?.unit);
+  measureResultLabel.textContent =
+    mode === "amount" ? "Quantity" : "Price";
+  measureQuickPicks.innerHTML = (mode === "amount"
+    ? [10, 20, 50, 100].map((value) => ({ label: peso(value), value }))
+    : [0.25, 0.5, 0.75, 1].map((value) => ({
+        label: window.miniMartDB.formatQuantity(value, measuredProduct.unit),
+        value,
+      })))
+    .map(
+      (pick) =>
+        `<button type="button" data-measure-pick="${pick.value}">${pick.label}</button>`,
+    )
+    .join("");
+  updateMeasuredPreview();
+}
+
+function updateMeasuredPreview() {
+  if (!measuredProduct) return;
+
+  const unit = measuredProduct.unit;
+  const decimals = window.miniMartDB.unitDecimals(unit);
+  const inputDecimals = measuredMode === "amount" ? 2 : decimals;
+  const entered = parseMeasureValue(measureValue.value);
+  let quantity = null;
+  let lineTotal = 0;
+  let error = "";
+  measureWarning.hidden = true;
+  measureWarning.textContent = "";
+
+  if (entered === null && measureValue.value.trim()) {
+    error = "Enter a valid number using digits, a comma, or a dot.";
+  } else if (entered !== null) {
+    const decimalPart = String(measureValue.value).replace(",", ".").split(".")[1] || "";
+    if (decimalPart.length > inputDecimals) {
+      error = `This input allows up to ${inputDecimals} decimal places.`;
+    } else if (entered <= 0) {
+      error = "Enter an amount greater than zero.";
+    } else if (measuredMode === "amount" && Number(measuredProduct.price) <= 0) {
+      error = "This product needs a price before it can be sold by amount.";
+    } else if (measuredMode === "amount") {
+      quantity = floorQuantity(entered / Number(measuredProduct.price), unit);
+      lineTotal = window.miniMartDB.roundMoney(entered);
+      if (quantity <= 0) error = "That amount is too small for one unit.";
+    } else {
+      quantity = window.miniMartDB.roundQuantity(entered, unit);
+      lineTotal = window.miniMartDB.roundMoney(quantity * measuredProduct.price);
+    }
+  }
+
+  if (!error && quantity !== null && quantity > Number(measuredProduct.stock)) {
+    const blocking =
+      window.miniMartSettings.get().blockOutOfStockSales !== false;
+    if (blocking) {
+      error = `Only ${window.miniMartDB.formatQuantity(measuredProduct.stock, unit)} left.`;
+    } else {
+      measureWarning.hidden = false;
+      measureWarning.textContent = "Warning: this quantity is above available stock.";
+    }
+  }
+
+  measureError.hidden = !error;
+  measureError.textContent = error;
+  addMeasuredToCart.disabled = Boolean(error) || quantity === null;
+
+  if (quantity !== null) {
+    measureResult.textContent =
+      measuredMode === "amount"
+        ? window.miniMartDB.formatQuantity(quantity, unit)
+        : peso(lineTotal);
+  } else {
+    measureResult.textContent = peso(0);
+  }
+
+  measureValue.setAttribute("aria-invalid", String(Boolean(error)));
+}
+
+function openMeasureModal(product, editName = null) {
+  const unit = window.miniMartDB.normalizeUnit(product.unit);
+  const stock = Number(product.stock) || 0;
+  const blocking = window.miniMartSettings.get().blockOutOfStockSales !== false;
+  if (blocking && stock <= 0) {
+    showCheckoutToast("This product is out of stock and cannot be sold.");
+    return;
+  }
+
+  measuredProduct = { ...product, unit };
+  measuredEditName = editName;
+  measureReturnFocus = editName
+    ? null
+    : productCards.find((card) => card.dataset.name === product.name);
+  measureProductSummary.textContent = `${product.name} — ${peso(product.price)} / ${unitText(unit)}`;
+  measureStock.textContent = `${window.miniMartDB.formatQuantity(stock, unit)} left`;
+  measureValue.value = editName && cart.get(editName)
+    ? cart.get(editName).inputValue || cart.get(editName).quantity
+    : "";
+  setMeasureMode(editName && cart.get(editName)?.amountMode ? "amount" : "quantity");
+  measureModal.hidden = false;
+  measureValue.focus();
+}
+
+function addMeasuredLine() {
+  updateMeasuredPreview();
+  if (addMeasuredToCart.disabled || !measuredProduct) return;
+
+  const unit = measuredProduct.unit;
+  const entered = parseMeasureValue(measureValue.value);
+  const quantity =
+    measuredMode === "amount"
+      ? floorQuantity(entered / Number(measuredProduct.price), unit)
+      : window.miniMartDB.roundQuantity(entered, unit);
+  const lineTotal = window.miniMartDB.roundMoney(
+    measuredMode === "amount" ? entered : quantity * measuredProduct.price,
+  );
+  const existing = measuredEditName ? cart.get(measuredEditName) : cart.get(measuredProduct.name);
+  const item = existing && !measuredEditName ? { ...existing } : {
+    name: measuredProduct.name,
+    price: Number(measuredProduct.price),
+    quantity: 0,
+    unit,
+    lineTotal: 0,
+  };
+
+  if (measuredEditName) {
+    item.quantity = quantity;
+    item.lineTotal = lineTotal;
+  } else {
+    item.quantity = window.miniMartDB.roundQuantity(item.quantity + quantity, unit);
+    item.lineTotal = window.miniMartDB.roundMoney(item.lineTotal + lineTotal);
+  }
+  item.unit = unit;
+  item.amountMode = measuredMode === "amount";
+  item.inputValue = measureValue.value;
+  if (measuredEditName) cart.delete(measuredEditName);
+  cart.set(item.name, item);
+  closeMeasureModal();
+  renderCart();
+}
 
 /* =========================================================
    SUKI REWARD RULES
@@ -436,6 +636,7 @@ function renderProducts() {
                   data-name="${escapeHtml(product.name)}"
                   data-price="${product.price}"
                   data-stock="${product.stock}"
+                  data-unit="${product.unit || "piece"}"
                 >
                   <div class="product-head">
                     <span class="product-icon">
@@ -455,11 +656,15 @@ function renderProducts() {
                   </h2>
 
                   <p class="price">
-                    ${peso(product.price)}
+                    ${measuredUnit(product.unit)
+                      ? `${peso(product.price)} / ${unitText(product.unit)}`
+                      : peso(product.price)}
                   </p>
 
                   <span class="stock">
-                    ${product.stock} left
+                    ${measuredUnit(product.unit)
+                      ? `${window.miniMartDB.formatQuantity(product.stock, product.unit)} left`
+                      : `${product.stock} left`}
                   </span>
                 </article>
                 `,
@@ -495,11 +700,17 @@ function refreshProductCards() {
   );
 
   productCards.forEach((product) => {
+    const current = window.miniMartDB.products().find(
+      (entry) => entry.name === product.dataset.name,
+    );
     const stock = stockByName.get(product.dataset.name) ?? 0;
 
     product.dataset.stock = stock;
 
-    product.querySelector(".stock").textContent = `${stock} left`;
+    product.querySelector(".stock").textContent =
+      current && measuredUnit(current.unit)
+        ? `${window.miniMartDB.formatQuantity(stock, current.unit)} left`
+        : `${stock} left`;
 
     product.style.opacity = stock ? "1" : ".55";
   });
@@ -507,6 +718,12 @@ function refreshProductCards() {
 
 function addToCart() {
   const name = this.dataset.name;
+  const product = window.miniMartDB.products().find((entry) => entry.name === name);
+
+  if (product && measuredUnit(product.unit)) {
+    openMeasureModal(product);
+    return;
+  }
 
   const stock = Number(this.dataset.stock);
   const blockOutOfStockSales =
@@ -616,11 +833,61 @@ productsSection.addEventListener("keydown", (event) => {
   }
 });
 
+document.getElementById("closeMeasureModal").addEventListener("click", closeMeasureModal);
+document.getElementById("cancelMeasureModal").addEventListener("click", closeMeasureModal);
+measureModal.addEventListener("click", (event) => {
+  if (event.target === measureModal) closeMeasureModal();
+});
+measureValue.addEventListener("input", updateMeasuredPreview);
+addMeasuredToCart.addEventListener("click", addMeasuredLine);
+document.querySelectorAll("[data-measure-mode]").forEach((button) => {
+  button.addEventListener("click", () => setMeasureMode(button.dataset.measureMode));
+});
+measureQuickPicks.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-measure-pick]");
+  if (!button) return;
+  measureValue.value = button.dataset.measurePick;
+  updateMeasuredPreview();
+});
+document.addEventListener("keydown", (event) => {
+  if (measureModal.hidden) return;
+  if (event.key === "Escape") {
+    closeMeasureModal();
+    return;
+  }
+  if (event.key === "Enter" && document.activeElement === measureValue) {
+    event.preventDefault();
+    addMeasuredLine();
+  }
+  if (event.key === "Tab") {
+    const focusable = [...measureModal.querySelectorAll("button, input")].filter(
+      (element) => !element.disabled,
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+});
+
 /* =========================================================
    SELL / COMPLETE PURCHASE
 ========================================================= */
 
 sellButton.addEventListener("click", () => {
+  if (saleInProgress) return;
+  saleInProgress = true;
+  sellButton.disabled = true;
+
+  const productsSnapshot = localStorage.getItem("miniMartProducts");
+  const salesSnapshot = localStorage.getItem("miniMartSales");
+  const sukisSnapshot = localStorage.getItem(SUKI_STORAGE_KEY);
+
   const entries = [...cart.values()];
 
   const total = getCartTotal();
@@ -641,6 +908,7 @@ sellButton.addEventListener("click", () => {
 
   if (!entries.length || !Number.isFinite(paid)) {
     updatePayment();
+    saleInProgress = false;
     return;
   }
 
@@ -654,7 +922,7 @@ sellButton.addEventListener("click", () => {
       paymentError.hidden = false;
 
       paymentError.textContent = "This Suki customer is inactive.";
-
+      saleInProgress = false;
       return;
     }
 
@@ -675,7 +943,26 @@ sellButton.addEventListener("click", () => {
 
   if (!Number.isFinite(paid) || paid < cashRequired) {
     updatePayment();
+    saleInProgress = false;
     return;
+  }
+
+  const currentInventory = window.miniMartDB.products();
+  if (window.miniMartSettings.get().blockOutOfStockSales !== false) {
+    for (const item of entries) {
+      const product = currentInventory.find((entry) => entry.name === item.name);
+      if (
+        product &&
+        Number(item.quantity) > Number(product.stock)
+      ) {
+        const unit = window.miniMartDB.normalizeUnit(product.unit);
+        saleInProgress = false;
+        updatePayment();
+        paymentError.hidden = false;
+        paymentError.textContent = `Only ${window.miniMartDB.formatQuantity(product.stock, unit)} of ${product.name} is available.`;
+        return;
+      }
+    }
   }
 
   /* =========================================
@@ -797,7 +1084,19 @@ sellButton.addEventListener("click", () => {
     const product = inventory.find((entry) => entry.name === item.name);
 
     if (product) {
-      product.stock -= item.quantity;
+      const unit = window.miniMartDB.normalizeUnit(product.unit);
+      const nextStock = Number(product.stock) - Number(item.quantity);
+      if (
+        window.miniMartSettings.get().blockOutOfStockSales !== false &&
+        nextStock < 0
+      ) {
+        product.stock = Number(product.stock);
+        return;
+      }
+      product.stock = window.miniMartDB.roundQuantity(
+        nextStock,
+        unit,
+      );
     }
   });
 
@@ -811,15 +1110,44 @@ sellButton.addEventListener("click", () => {
 
       quantity: item.quantity,
 
+      productId: product?.id || item.name,
+
+      unit: window.miniMartDB.normalizeUnit(item.unit || product?.unit),
+
+      lineTotal: window.miniMartDB.roundMoney(
+        item.lineTotal ?? item.price * item.quantity,
+      ),
+
       costPrice: window.miniMartDB.isKnownCost(product?.costPrice)
         ? Number(product.costPrice)
         : null,
     };
   });
 
-  window.miniMartDB.saveProducts(inventory);
-
-  window.miniMartDB.recordSale(saleItems, total);
+  try {
+    window.miniMartDB.saveProducts(inventory);
+    window.miniMartDB.recordSale(saleItems, total);
+  } catch (error) {
+    if (productsSnapshot === null) {
+      localStorage.removeItem("miniMartProducts");
+    } else {
+      localStorage.setItem("miniMartProducts", productsSnapshot);
+    }
+    if (salesSnapshot === null) {
+      localStorage.removeItem("miniMartSales");
+    } else {
+      localStorage.setItem("miniMartSales", salesSnapshot);
+    }
+    if (sukisSnapshot === null) {
+      localStorage.removeItem(SUKI_STORAGE_KEY);
+    } else {
+      localStorage.setItem(SUKI_STORAGE_KEY, sukisSnapshot);
+    }
+    saleInProgress = false;
+    updatePayment();
+    showCheckoutToast(error.message || "The sale could not be saved.");
+    return;
+  }
 
   /* =========================================
        RESET CHECKOUT
@@ -849,6 +1177,7 @@ sellButton.addEventListener("click", () => {
   renderCart();
 
   refreshSukiSelector();
+  saleInProgress = false;
 });
 
 /* =========================================================
@@ -910,9 +1239,11 @@ amountGiven.addEventListener("input", updatePayment);
 ========================================================= */
 
 function getCartTotal() {
-  return [...cart.values()].reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
+  return window.miniMartDB.roundMoney(
+    [...cart.values()].reduce(
+      (sum, item) => sum + Number(item.lineTotal ?? item.price * item.quantity),
+      0,
+    ),
   );
 }
 
@@ -935,20 +1266,22 @@ function renderCart() {
     .map(
       (item) =>
         `
-          <div class="cart-row">
+          <div class="cart-row" data-measured="${String(Boolean(item.unit && measuredUnit(item.unit)))}" data-edit="${escapeHtml(item.name)}">
             <span>
               ${escapeHtml(item.name)}
 
               <small>
-                ${item.quantity}
-                x
-                ${peso(item.price)}
+                ${item.unit && measuredUnit(item.unit)
+                  ? `${window.miniMartDB.formatQuantity(item.quantity, item.unit)} x ${peso(item.price)}/${unitText(item.unit)}`
+                  : `${item.quantity}`}
+                ${item.unit && measuredUnit(item.unit) ? "" : " x"}
+                ${item.unit && measuredUnit(item.unit) ? "" : peso(item.price)}
               </small>
             </span>
 
             <span>
               <strong>
-                ${peso(item.quantity * item.price)}
+                ${peso(item.lineTotal ?? item.quantity * item.price)}
               </strong>
 
               <button
@@ -973,6 +1306,17 @@ function renderCart() {
       cart.delete(button.dataset.remove);
 
       renderCart();
+    }),
+  );
+
+  cartItems.querySelectorAll('[data-measured="true"]').forEach((row) =>
+    row.addEventListener("click", (event) => {
+      if (event.target.closest("[data-remove]")) return;
+      const item = cart.get(row.dataset.edit);
+      const product = window.miniMartDB.products().find(
+        (entry) => entry.name === row.dataset.edit,
+      );
+      if (item && product) openMeasureModal(product, item.name);
     }),
   );
 }

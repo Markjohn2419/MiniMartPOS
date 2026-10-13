@@ -16,12 +16,27 @@ const noProducts = document.getElementById("noProducts");
 const modal = document.getElementById("categoryModal");
 const form = document.getElementById("categoryForm");
 const categoryName = document.getElementById("categoryName");
+const categoryNameError = document.getElementById("categoryNameError");
 const productFields = document.getElementById("productFields");
 const categoryHelp = document.getElementById("categoryHelp");
 const productName = document.getElementById("productName");
 const productPrice = document.getElementById("productPrice");
 const productCost = document.getElementById("productCost");
 const productStock = document.getElementById("productStock");
+const productUnit = document.getElementById("productUnit");
+const productCostLabel = document.getElementById("productCostLabel");
+const productPriceLabel = document.getElementById("productPriceLabel");
+const productStockLabel = document.getElementById("productStockLabel");
+const stockSuffix = document.getElementById("stockSuffix");
+const productNameError = document.getElementById("productNameError");
+const productCostError = document.getElementById("productCostError");
+const productPriceError = document.getElementById("productPriceError");
+const productStockError = document.getElementById("productStockError");
+const lossWarning = document.getElementById("lossWarning");
+const lossConfirmField = document.getElementById("lossConfirmField");
+const lossConfirm = document.getElementById("lossConfirm");
+const categoryDefaultUnit = document.getElementById("categoryDefaultUnit");
+const categoryUnitField = document.getElementById("categoryUnitField");
 const categoryIconPicker = document.getElementById("categoryIconPicker");
 const deleteProductModal = document.getElementById("deleteProductModal");
 const deleteProductCopy = document.getElementById("deleteProductCopy");
@@ -30,6 +45,70 @@ let editingName = null;
 let modalMode = "create-category";
 let selectedCategoryIcon = "Icons/bread.png";
 let rows = [];
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function unitLabel(unit) {
+  return window.miniMartDB.units()[
+    window.miniMartDB.normalizeUnit(unit)
+  ].shortLabel;
+}
+
+function updateProductUnitUi() {
+  const unit = window.miniMartDB.normalizeUnit(productUnit.value);
+  const label = unitLabel(unit);
+  productCostLabel.textContent = `Cost per ${label} (₱)`;
+  productPriceLabel.textContent = `Sell price per ${label} (₱)`;
+  productStockLabel.textContent = `Stock (${label})`;
+  stockSuffix.textContent = label;
+  productStock.step = 10 ** -window.miniMartDB.unitDecimals(unit);
+  productStock.placeholder = unit === "piece" || unit === "pack" || unit === "g" || unit === "mL" ? "0" : "0.000";
+  updateLossWarning();
+}
+
+function setFieldError(field, element, message) {
+  field.setAttribute("aria-invalid", String(Boolean(message)));
+  element.textContent = message;
+}
+
+function updateLossWarning() {
+  const cost = Number(productCost.value);
+  const price = Number(productPrice.value);
+  const hasValues = productCost.value !== "" && productPrice.value !== "";
+  const loss = hasValues && Number.isFinite(cost) && Number.isFinite(price) && price < cost;
+  const equal = hasValues && Number.isFinite(cost) && Number.isFinite(price) && price === cost;
+  lossWarning.hidden = !loss && !equal;
+  lossWarning.textContent = loss
+    ? "You would sell at a loss. Confirm to continue."
+    : "No profit on this item.";
+  lossConfirmField.hidden = !loss;
+  if (!loss) lossConfirm.checked = false;
+}
+
+function hasProductHistory(product) {
+  return Number(product.stock) > 0 || window.miniMartDB.sales().some((sale) =>
+    sale.items?.some((item) => item.name === product.name || item.productId === product.name),
+  );
+}
+
+function validateForm() {
+  setFieldError(categoryName, categoryNameError, categoryName.value.trim() ? "" : "Category name is required.");
+  setFieldError(productName, productNameError, productName.value.trim() ? "" : "Product name is required.");
+  const moneyPattern = /^\d+(?:\.\d{1,2})?$/;
+  setFieldError(productCost, productCostError, productCost.value === "" ? "Cost is required." : !moneyPattern.test(productCost.value) || Number(productCost.value) < 0 ? "Enter a valid amount with up to 2 decimals." : "");
+  setFieldError(productPrice, productPriceError, productPrice.value === "" ? "Sell price is required." : !moneyPattern.test(productPrice.value) || Number(productPrice.value) < 0 ? "Enter a valid amount with up to 2 decimals." : "");
+  const unit = window.miniMartDB.normalizeUnit(productUnit.value);
+  const stockPattern = unit === "kg" || unit === "L" ? /^\d+(?:\.\d{1,3})?$/ : /^\d+$/;
+  setFieldError(productStock, productStockError, productStock.value === "" ? "Stock is required." : !stockPattern.test(productStock.value) || Number(productStock.value) < 0 ? `Enter a valid ${unitLabel(unit)} quantity.` : "");
+  return ![categoryNameError, productNameError, productCostError, productPriceError, productStockError].some((error) => error.textContent);
+}
 
 function categoryAccent(category) {
   return (
@@ -75,11 +154,20 @@ function renderRows() {
       const categoryProducts = products
         .filter((product) => product.category === category)
         .sort((first, second) => first.name.localeCompare(second.name));
-      const header = `<tr class="category-group" style="--accent:${categoryAccent(category)}" data-category="${category}" data-open="false" tabindex="0" aria-expanded="false"><td colspan="6"><span><img src="${categoryIconPath(category)}" alt="" /></span><strong>${category}</strong><small>${categoryProducts.length} products</small><b>＋</b></td></tr>`;
+      const safeCategory = escapeHtml(category);
+      const categoryUnit = window.miniMartDB.categoryDefaultUnit(category);
+      const header = `<tr class="category-group" style="--accent:${categoryAccent(category)}" data-category="${safeCategory}" data-open="false" tabindex="0" aria-expanded="false"><td colspan="6"><span><img src="${categoryIconPath(category)}" alt="" /></span><strong>${safeCategory}</strong><small>${categoryProducts.length} products</small>${categoryUnit !== "piece" ? `<em class="unit-tag">${unitLabel(categoryUnit)}</em>` : ""}<b>＋</b></td></tr>`;
       const productRows = categoryProducts
         .map(
-          (product) =>
-            `<tr data-product="${product.name}" data-category="${product.category}"><td>${product.name}</td><td><span class="category-label" style="--accent:${categoryAccent(product.category)}"><img src="${categoryIconPath(product.category)}" alt="" />${product.category}</span></td><td class="inventory-price">${window.miniMartDB.isKnownCost(product.costPrice) ? window.miniMartSettings.formatCurrency(product.costPrice) : "—"}</td><td class="inventory-price">${window.miniMartSettings.formatCurrency(product.price)}</td><td class="inventory-stock">${product.stock}</td><td class="row-actions"><button class="edit-action" type="button">♢ Edit</button><button class="delete-action" type="button">♧ Delete</button></td></tr>`,
+          (product) => {
+            const unit = window.miniMartDB.normalizeUnit(product.unit);
+            const price = window.miniMartSettings.formatCurrency(product.price);
+            const stock =
+              unit === "piece"
+                ? String(window.miniMartDB.roundQuantity(product.stock, unit))
+                : window.miniMartDB.formatQuantity(product.stock, unit);
+            return `<tr data-product="${escapeHtml(product.name)}" data-category="${escapeHtml(product.category)}"><td>${escapeHtml(product.name)}</td><td><span class="category-label" style="--accent:${categoryAccent(product.category)}"><img src="${categoryIconPath(product.category)}" alt="" />${escapeHtml(product.category)}</span></td><td class="inventory-price">${window.miniMartDB.isKnownCost(product.costPrice) ? window.miniMartSettings.formatCurrency(product.costPrice) : "—"}</td><td class="inventory-price">${price}${unit === "piece" ? "" : ` / ${unitLabel(unit)}`}</td><td class="inventory-stock">${stock}</td><td class="row-actions"><button class="edit-action" type="button">♢ Edit</button><button class="delete-action" type="button">♧ Delete</button></td></tr>`;
+          },
         )
         .join("");
       return header + productRows;
@@ -140,6 +228,14 @@ function openModal(product) {
   productPrice.value = product?.price ?? "";
   productStock.value = product?.stock ?? "";
   categoryName.value = product?.category || "";
+  productUnit.value =
+    product?.unit || window.miniMartDB.categoryDefaultUnit(product?.category);
+  categoryDefaultUnit.value = window.miniMartDB.categoryDefaultUnit(
+    product?.category || "",
+  );
+  categoryUnitField.hidden = Boolean(product);
+  updateProductUnitUi();
+  lossConfirm.checked = false;
   selectedCategoryIcon = product
     ? categoryIconPath(product.category)
     : "Icons/bread.png";
@@ -166,6 +262,12 @@ function openProductModal(category) {
   productCost.value = "";
   productPrice.value = "";
   productStock.value = "";
+  productUnit.value =
+    window.miniMartDB.categoryDefaultUnit(category) || "piece";
+  categoryDefaultUnit.value = productUnit.value;
+  categoryUnitField.hidden = false;
+  updateProductUnitUi();
+  lossConfirm.checked = false;
   modal.hidden = false;
   productName.focus();
 }
@@ -175,8 +277,15 @@ function closeModal() {
   form.reset();
   categoryName.readOnly = false;
   categoryIconPicker.hidden = false;
+  categoryUnitField.hidden = false;
   modalMode = "create-category";
   editingName = null;
+  [productNameError, productCostError, productPriceError, productStockError].forEach((error) => {
+    error.textContent = "";
+  });
+  categoryNameError.textContent = "";
+  lossWarning.hidden = true;
+  lossConfirmField.hidden = true;
 }
 
 renderRows();
@@ -245,17 +354,28 @@ form.addEventListener("submit", (event) => {
   const products = window.miniMartDB.products();
   const category = categoryName.value.trim();
   const name = productName.value.trim();
-  const price = Number(productPrice.value);
-  const costPrice = Number(productCost.value);
+  if (!validateForm()) return;
+  const price = window.miniMartDB.roundMoney(Number(productPrice.value));
+  const costPrice = window.miniMartDB.roundMoney(Number(productCost.value));
   const stock = Number(productStock.value);
+  const unit = window.miniMartDB.normalizeUnit(productUnit.value);
+  const normalizedStock = window.miniMartDB.roundQuantity(stock, unit);
+  if (!category) return;
   if (
-    !category ||
-    !name ||
-    Number.isNaN(price) ||
-    Number.isNaN(costPrice) ||
-    Number.isNaN(stock)
-  )
+    modalMode === "create-category" &&
+    window.miniMartDB.categories().some(
+      (entry) => entry.toLowerCase() === category.toLowerCase(),
+    )
+  ) {
+    setFieldError(categoryName, categoryNameError, "This category already exists.");
     return;
+  }
+  if (price < costPrice && !lossConfirm.checked) {
+    lossWarning.hidden = false;
+    lossConfirmField.hidden = false;
+    lossConfirm.focus();
+    return;
+  }
 
   if (modalMode === "create-category") {
     const existing =
@@ -271,7 +391,8 @@ form.addEventListener("submit", (event) => {
       category,
       costPrice,
       price,
-      stock,
+      stock: normalizedStock,
+      unit,
       icon: "◇",
       accent: "var(--blue)",
     });
@@ -280,6 +401,7 @@ form.addEventListener("submit", (event) => {
       category,
     ]);
     window.miniMartDB.saveCategoryIcon(category, selectedCategoryIcon);
+    window.miniMartDB.saveCategoryDefaultUnit(category, categoryDefaultUnit.value);
   } else if (modalMode === "edit-product") {
     const index = products.findIndex((entry) => entry.name === editingName);
     if (index !== -1)
@@ -289,28 +411,31 @@ form.addEventListener("submit", (event) => {
         category,
         costPrice,
         price,
-        stock,
+        stock: normalizedStock,
+        unit,
       };
   } else {
     if (
       products.some((entry) => entry.name.toLowerCase() === name.toLowerCase())
     )
       return;
-    if (
-      !window.miniMartDB
-        .categories()
-        .some((entry) => entry.toLowerCase() === category.toLowerCase())
-    )
+    const categoryExists = window.miniMartDB
+      .categories()
+      .some((entry) => entry.toLowerCase() === category.toLowerCase());
+    if (!categoryExists)
       window.miniMartDB.saveCategories([
         ...window.miniMartDB.categories(),
         category,
       ]);
+    if (!categoryExists)
+      window.miniMartDB.saveCategoryDefaultUnit(category, categoryDefaultUnit.value);
     products.push({
       name,
       category,
       costPrice,
       price,
-      stock,
+      stock: normalizedStock,
+      unit,
       icon: "◇",
       accent: "var(--blue)",
     });
@@ -326,6 +451,30 @@ document
 document
   .getElementById("createProduct")
   .addEventListener("click", () => openProductModal(""));
+productUnit.addEventListener("change", updateProductUnitUi);
+categoryDefaultUnit.addEventListener("change", () => {
+  if (modalMode === "edit-product") return;
+  productUnit.value = categoryDefaultUnit.value;
+  updateProductUnitUi();
+});
+productCost.addEventListener("input", updateLossWarning);
+productPrice.addEventListener("input", updateLossWarning);
+productUnit.addEventListener("change", () => {
+  if (modalMode !== "edit-product") return;
+  const product = window.miniMartDB.products().find((entry) => entry.name === editingName);
+  if (product && product.unit !== productUnit.value && hasProductHistory(product)) {
+    const confirmed = window.confirm("Past sales keep their old unit, and stock will not be converted automatically.");
+    if (!confirmed) productUnit.value = product.unit;
+    updateProductUnitUi();
+  }
+});
+categoryName.addEventListener("input", () => {
+  if (modalMode === "edit-product") return;
+  const unit = window.miniMartDB.categoryDefaultUnit(categoryName.value.trim());
+  categoryDefaultUnit.value = unit;
+  productUnit.value = unit;
+  updateProductUnitUi();
+});
 document.querySelectorAll(".icon-option").forEach((button) =>
   button.addEventListener("click", () => {
     selectedCategoryIcon = button.dataset.icon;

@@ -3,6 +3,16 @@ const SALES_KEY = "miniMartSales";
 const CATEGORIES_KEY = "miniMartCategories";
 const CATEGORY_ICONS_KEY = "miniMartCategoryIcons";
 const DELETED_PRODUCTS_KEY = "miniMartDeletedProducts";
+const CATEGORY_UNITS_KEY = "miniMartCategoryUnits";
+
+const UNIT_RULES = {
+  piece: { label: "piece", shortLabel: "pc", decimals: 0 },
+  kg: { label: "kilogram", shortLabel: "kg", decimals: 3 },
+  g: { label: "gram", shortLabel: "g", decimals: 0 },
+  L: { label: "liter", shortLabel: "L", decimals: 3 },
+  mL: { label: "milliliter", shortLabel: "mL", decimals: 0 },
+  pack: { label: "pack", shortLabel: "pack", decimals: 0 },
+};
 
 const seedProducts = [
   {
@@ -170,6 +180,34 @@ function isKnownCost(value) {
   return Number.isFinite(amount) && amount >= 0;
 }
 
+function normalizeUnit(value) {
+  return Object.prototype.hasOwnProperty.call(UNIT_RULES, value) ? value : "piece";
+}
+
+function unitDecimals(unit) {
+  return UNIT_RULES[normalizeUnit(unit)].decimals;
+}
+
+function roundQuantity(value, unit = "piece") {
+  const decimals = unitDecimals(unit);
+  const factor = 10 ** decimals;
+  return Math.round((Number(value) + Number.EPSILON) * factor) / factor;
+}
+
+function roundMoney(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+function formatQuantity(value, unit = "piece") {
+  const normalizedUnit = normalizeUnit(unit);
+  const amount = roundQuantity(value, normalizedUnit);
+  const formatted = amount
+    .toFixed(unitDecimals(normalizedUnit))
+    .replace(/(\.\d*?)0+$/, "$1")
+    .replace(/\.$/, "");
+  return `${formatted} ${UNIT_RULES[normalizedUnit].shortLabel}`;
+}
+
 function read(key, fallback) {
   const saved = localStorage.getItem(key);
   return saved ? JSON.parse(saved) : clone(fallback);
@@ -196,6 +234,7 @@ function normalizeProducts(products) {
       category: product.category || seed.category || "Snacks",
       icon: product.icon || seed.icon || "◇",
       accent: product.accent || seed.accent || "var(--gold)",
+      unit: normalizeUnit(product.unit || seed.unit),
       costPrice: isKnownCost(product.costPrice)
         ? Number(product.costPrice)
         : isKnownCost(seed.costPrice)
@@ -207,6 +246,12 @@ function normalizeProducts(products) {
 
 window.miniMartDB = {
   isKnownCost,
+  units: () => UNIT_RULES,
+  normalizeUnit,
+  unitDecimals,
+  roundQuantity,
+  roundMoney,
+  formatQuantity,
   categories() {
     const saved = localStorage.getItem(CATEGORIES_KEY);
     const categories = saved
@@ -219,6 +264,15 @@ window.miniMartDB = {
   saveCategories(categories) {
     write(CATEGORIES_KEY, [...new Set(categories)]);
   },
+  categoryDefaultUnit(category) {
+    const units = read(CATEGORY_UNITS_KEY, {});
+    return normalizeUnit(units[category]);
+  },
+  saveCategoryDefaultUnit(category, unit) {
+    const units = read(CATEGORY_UNITS_KEY, {});
+    units[category] = normalizeUnit(unit);
+    write(CATEGORY_UNITS_KEY, units);
+  },
   renameCategory(oldName, newName) {
     const categories = this.categories();
     const products = this.products().map((product) =>
@@ -228,11 +282,16 @@ window.miniMartDB = {
       category === oldName ? newName : category,
     );
     const icons = read(CATEGORY_ICONS_KEY, {});
+    const units = read(CATEGORY_UNITS_KEY, {});
     if (icons[oldName] && !icons[newName]) icons[newName] = icons[oldName];
     delete icons[oldName];
+    if (units[oldName] !== undefined && units[newName] === undefined)
+      units[newName] = units[oldName];
+    delete units[oldName];
     write(CATEGORIES_KEY, renamed);
     write(PRODUCTS_KEY, products);
     write(CATEGORY_ICONS_KEY, icons);
+    write(CATEGORY_UNITS_KEY, units);
   },
   moveCategory(category, direction) {
     const categories = this.categories();
@@ -264,9 +323,12 @@ window.miniMartDB = {
       );
     }
     const icons = read(CATEGORY_ICONS_KEY, {});
+    const units = read(CATEGORY_UNITS_KEY, {});
     delete icons[category];
+    delete units[category];
     write(CATEGORIES_KEY, this.categories().filter((entry) => entry !== category));
     write(CATEGORY_ICONS_KEY, icons);
+    write(CATEGORY_UNITS_KEY, units);
     return { error: null };
   },
   categoryIcon(category) {
