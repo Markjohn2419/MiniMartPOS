@@ -84,13 +84,18 @@
           <input
             id="search"
             type="search"
-            placeholder="Search products..."
-            aria-label="Search products"
+            placeholder="Search products or scan a barcode..."
+            aria-label="Search products or scan a barcode"
+            aria-describedby="barcodeStatus"
             name="mini-mart-product-search"
             autocomplete="off"
             autocorrect="off"
+            autocapitalize="off"
             spellcheck="false"
           />
+          <p id="barcodeStatus" class="barcode-status" role="status" aria-live="polite">
+            Click the search box, then scan. Press Enter if your scanner does not.
+          </p>
         </div>
 
         <!-- =========================

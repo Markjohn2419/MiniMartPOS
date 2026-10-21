@@ -1,4 +1,14 @@
 /* Checkout page layout and cart presentation. */
+.checkout-page .barcode-status {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.checkout-page .barcode-status.is-error {
+  color: var(--red);
+}
 .checkout-page .products {
   align-items: start;
 }

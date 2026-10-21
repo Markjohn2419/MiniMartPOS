@@ -20,6 +20,8 @@ const categoryNameError = document.getElementById("categoryNameError");
 const productFields = document.getElementById("productFields");
 const categoryHelp = document.getElementById("categoryHelp");
 const productName = document.getElementById("productName");
+const productBarcode = document.getElementById("productBarcode");
+const productBarcodeError = document.getElementById("productBarcodeError");
 const productPrice = document.getElementById("productPrice");
 const productCost = document.getElementById("productCost");
 const productStock = document.getElementById("productStock");
@@ -101,13 +103,20 @@ function hasProductHistory(product) {
 function validateForm() {
   setFieldError(categoryName, categoryNameError, categoryName.value.trim() ? "" : "Category name is required.");
   setFieldError(productName, productNameError, productName.value.trim() ? "" : "Product name is required.");
+  const barcode = productBarcode.value.trim();
+  const duplicate = barcode && window.miniMartDB.products().find((entry) =>
+    entry.name !== editingName && String(entry.barcode || "").trim() === barcode,
+  );
+  setFieldError(productBarcode, productBarcodeError, duplicate
+    ? `This barcode is already assigned to ${duplicate.name}.`
+    : "");
   const moneyPattern = /^\d+(?:\.\d{1,2})?$/;
   setFieldError(productCost, productCostError, productCost.value === "" ? "Cost is required." : !moneyPattern.test(productCost.value) || Number(productCost.value) < 0 ? "Enter a valid amount with up to 2 decimals." : "");
   setFieldError(productPrice, productPriceError, productPrice.value === "" ? "Sell price is required." : !moneyPattern.test(productPrice.value) || Number(productPrice.value) < 0 ? "Enter a valid amount with up to 2 decimals." : "");
   const unit = window.miniMartDB.normalizeUnit(productUnit.value);
   const stockPattern = unit === "kg" || unit === "L" ? /^\d+(?:\.\d{1,3})?$/ : /^\d+$/;
   setFieldError(productStock, productStockError, productStock.value === "" ? "Stock is required." : !stockPattern.test(productStock.value) || Number(productStock.value) < 0 ? `Enter a valid ${unitLabel(unit)} quantity.` : "");
-  return ![categoryNameError, productNameError, productCostError, productPriceError, productStockError].some((error) => error.textContent);
+  return ![categoryNameError, productNameError, productBarcodeError, productCostError, productPriceError, productStockError].some((error) => error.textContent);
 }
 
 function categoryAccent(category) {
@@ -166,7 +175,7 @@ function renderRows() {
               unit === "piece"
                 ? String(window.miniMartDB.roundQuantity(product.stock, unit))
                 : window.miniMartDB.formatQuantity(product.stock, unit);
-            return `<tr data-product="${escapeHtml(product.name)}" data-category="${escapeHtml(product.category)}"><td>${escapeHtml(product.name)}</td><td><span class="category-label" style="--accent:${categoryAccent(product.category)}"><img src="${categoryIconPath(product.category)}" alt="" />${escapeHtml(product.category)}</span></td><td class="inventory-price">${window.miniMartDB.isKnownCost(product.costPrice) ? window.miniMartSettings.formatCurrency(product.costPrice) : "—"}</td><td class="inventory-price">${price}${unit === "piece" ? "" : ` / ${unitLabel(unit)}`}</td><td class="inventory-stock">${stock}</td><td class="row-actions"><button class="edit-action" type="button">♢ Edit</button><button class="delete-action" type="button">♧ Delete</button></td></tr>`;
+            return `<tr data-product="${escapeHtml(product.name)}" data-category="${escapeHtml(product.category)}" data-barcode="${escapeHtml(product.barcode || "")}"><td>${escapeHtml(product.name)}${product.barcode ? `<small class="product-barcode">Barcode: ${escapeHtml(product.barcode)}</small>` : ""}</td><td><span class="category-label" style="--accent:${categoryAccent(product.category)}"><img src="${categoryIconPath(product.category)}" alt="" />${escapeHtml(product.category)}</span></td><td class="inventory-price">${window.miniMartDB.isKnownCost(product.costPrice) ? window.miniMartSettings.formatCurrency(product.costPrice) : "—"}</td><td class="inventory-price">${price}${unit === "piece" ? "" : ` / ${unitLabel(unit)}`}</td><td class="inventory-stock">${stock}</td><td class="row-actions"><button class="edit-action" type="button">♢ Edit</button><button class="delete-action" type="button">♧ Delete</button></td></tr>`;
           },
         )
         .join("");
@@ -179,9 +188,12 @@ function renderRows() {
 
 function updateVisibleRows() {
   const query = search.value.toLowerCase().trim();
+  const matches = (row) =>
+    row.dataset.product.toLowerCase().includes(query) ||
+    row.dataset.barcode.toLowerCase().includes(query);
   let visible = 0;
   rows.forEach((row) => {
-    const match = row.dataset.product.toLowerCase().includes(query);
+    const match = matches(row);
     const group = tbody.querySelector(
       `.category-group[data-category="${CSS.escape(row.dataset.category)}"]`,
     );
@@ -195,7 +207,7 @@ function updateVisibleRows() {
       rows.some(
         (row) =>
           row.dataset.category === group.dataset.category &&
-          row.dataset.product.toLowerCase().includes(query),
+          matches(row),
       )
         ? ""
         : "none";
@@ -222,6 +234,8 @@ function openModal(product) {
     ? "Update the product details and category."
     : "Create the category and add its first product.";
   productName.value = product?.name || "";
+  productBarcode.value = product?.barcode || "";
+  setFieldError(productBarcode, productBarcodeError, "");
   productCost.value = window.miniMartDB.isKnownCost(product?.costPrice)
     ? product.costPrice
     : "";
@@ -259,6 +273,8 @@ function openProductModal(category) {
     ? `Add a new product to ${category}.`
     : "Add a product to an existing or new category.";
   productName.value = "";
+  productBarcode.value = "";
+  setFieldError(productBarcode, productBarcodeError, "");
   productCost.value = "";
   productPrice.value = "";
   productStock.value = "";
@@ -284,12 +300,22 @@ function closeModal() {
     error.textContent = "";
   });
   categoryNameError.textContent = "";
+  setFieldError(productBarcode, productBarcodeError, "");
   lossWarning.hidden = true;
   lossConfirmField.hidden = true;
 }
 
 renderRows();
 search.addEventListener("input", updateVisibleRows);
+productBarcode.addEventListener("input", () => setFieldError(productBarcode, productBarcodeError, ""));
+productBarcode.addEventListener("keydown", (event) => {
+  // A scanner's Enter suffix must not save a partially completed product form.
+  if (event.key === "Enter") {
+    event.preventDefault();
+    productBarcode.value = productBarcode.value.trim();
+    productBarcode.select();
+  }
+});
 
 tbody.addEventListener("click", (event) => {
   const group = event.target.closest(".category-group");
@@ -354,6 +380,7 @@ form.addEventListener("submit", (event) => {
   const products = window.miniMartDB.products();
   const category = categoryName.value.trim();
   const name = productName.value.trim();
+  const barcode = productBarcode.value.trim();
   if (!validateForm()) return;
   const price = window.miniMartDB.roundMoney(Number(productPrice.value));
   const costPrice = window.miniMartDB.roundMoney(Number(productCost.value));
@@ -388,6 +415,7 @@ form.addEventListener("submit", (event) => {
     if (existing) return;
     products.push({
       name,
+      barcode,
       category,
       costPrice,
       price,
@@ -408,6 +436,7 @@ form.addEventListener("submit", (event) => {
       products[index] = {
         ...products[index],
         name,
+        barcode,
         category,
         costPrice,
         price,
@@ -431,6 +460,7 @@ form.addEventListener("submit", (event) => {
       window.miniMartDB.saveCategoryDefaultUnit(category, categoryDefaultUnit.value);
     products.push({
       name,
+      barcode,
       category,
       costPrice,
       price,

@@ -77,7 +77,7 @@
           <input
             id="inventorySearch"
             type="search"
-            placeholder="Search products..."
+            placeholder="Search products or barcodes..."
             aria-label="Search inventory"
             name="mini-mart-inventory-search"
             autocomplete="off"
@@ -265,6 +265,24 @@
               >Product name<input id="productName" type="text" required />
               <small class="field-error" id="productNameError"></small>
             </label>
+            <label class="barcode-field" for="productBarcode">
+              Barcode (optional)
+              <input
+                id="productBarcode"
+                type="text"
+                placeholder="Click here, then scan the product"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                aria-describedby="productBarcodeHelp productBarcodeError"
+              />
+              <small class="field-error" id="productBarcodeError"></small>
+            </label>
+            <p class="modal-help" id="productBarcodeHelp">
+              Scan or type the exact code on the packaging, then click Save.
+              Leave blank for products without a barcode.
+            </p>
             <div class="modal-fields">
               <label
                 ><span id="productCostLabel">Cost per piece (&#8369;)</span><input

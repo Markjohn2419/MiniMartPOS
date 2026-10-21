@@ -19,6 +19,7 @@ const peso = (value) => window.miniMartSettings.formatCurrency(value);
 const receiptDate = document.getElementById("receiptDate");
 
 const search = document.getElementById("search");
+const barcodeStatus = document.getElementById("barcodeStatus");
 
 const sellButton = document.getElementById("sellButton");
 
@@ -145,11 +146,15 @@ function updateMeasuredPreview() {
     }
   }
 
-  if (!error && quantity !== null && quantity > Number(measuredProduct.stock)) {
+  const alreadyInCart = measuredEditName ? 0 : Number(cart.get(measuredProduct.name)?.quantity || 0);
+  const availableStock = window.miniMartDB.roundQuantity(
+    Math.max(0, Number(measuredProduct.stock) - alreadyInCart), unit,
+  );
+  if (!error && quantity !== null && quantity > availableStock) {
     const blocking =
       window.miniMartSettings.get().blockOutOfStockSales !== false;
     if (blocking) {
-      error = `Only ${window.miniMartDB.formatQuantity(measuredProduct.stock, unit)} left.`;
+      error = `Only ${window.miniMartDB.formatQuantity(availableStock, unit)} left to add.`;
     } else {
       measureWarning.hidden = false;
       measureWarning.textContent = "Warning: this quantity is above available stock.";
@@ -178,7 +183,8 @@ function openMeasureModal(product, editName = null) {
   const blocking = window.miniMartSettings.get().blockOutOfStockSales !== false;
   if (blocking && stock <= 0) {
     showCheckoutToast("This product is out of stock and cannot be sold.");
-    return;
+    setBarcodeStatus(`${product.name}: no stock available.`, true);
+    return false;
   }
 
   measuredProduct = { ...product, unit };
@@ -194,6 +200,7 @@ function openMeasureModal(product, editName = null) {
   setMeasureMode(editName && cart.get(editName)?.amountMode ? "amount" : "quantity");
   measureModal.hidden = false;
   measureValue.focus();
+  return true;
 }
 
 function addMeasuredLine() {
@@ -634,6 +641,7 @@ function renderProducts() {
                   style="--accent:${product.accent}"
                   data-category="${product.category}"
                   data-name="${escapeHtml(product.name)}"
+                  data-barcode="${escapeHtml(product.barcode || "")}"
                   data-price="${product.price}"
                   data-stock="${product.stock}"
                   data-unit="${product.unit || "piece"}"
@@ -717,21 +725,23 @@ function refreshProductCards() {
 }
 
 function addToCart() {
-  const name = this.dataset.name;
-  const product = window.miniMartDB.products().find((entry) => entry.name === name);
+  const product = window.miniMartDB.products().find((entry) => entry.name === this.dataset.name);
+  if (product) addProductToCart(product);
+}
 
-  if (product && measuredUnit(product.unit)) {
-    openMeasureModal(product);
-    return;
+function addProductToCart(product) {
+  if (measuredUnit(product.unit)) {
+    return openMeasureModal(product) ? "measure" : false;
   }
 
-  const stock = Number(this.dataset.stock);
+  const name = product.name;
+  const stock = Number(product.stock);
   const blockOutOfStockSales =
     window.miniMartSettings.get().blockOutOfStockSales !== false;
 
   const item = cart.get(name) || {
     name,
-    price: Number(this.dataset.price),
+    price: Number(product.price),
     quantity: 0,
   };
 
@@ -741,7 +751,8 @@ function addToCart() {
         ? "This product is out of stock and cannot be sold."
         : `Only ${stock} unit${stock === 1 ? "" : "s"} available.`,
     );
-    return;
+    setBarcodeStatus(`${name}: no more stock available for this cart.`, true);
+    return false;
   }
 
   item.quantity += 1;
@@ -749,15 +760,59 @@ function addToCart() {
   cart.set(name, item);
 
   renderCart();
+  return "added";
+}
+
+function setBarcodeStatus(message, isError = false) {
+  barcodeStatus.textContent = message;
+  barcodeStatus.classList.toggle("is-error", isError);
+}
+
+function addScannedBarcode() {
+  // Keep barcodes as strings so codes beginning with zero remain intact.
+  const barcode = search.value.trim();
+  if (!barcode) return;
+
+  const matches = window.miniMartDB.products().filter((product) =>
+    String(product.barcode || "").trim() === barcode,
+  );
+
+  if (matches.length !== 1) {
+    setBarcodeStatus(matches.length > 1
+      ? "This barcode belongs to multiple products. Correct it in Inventory."
+      : `Barcode ${barcode} is not registered. Add it to a product in Inventory.`, true);
+    search.select();
+    return;
+  }
+
+  const product = matches[0];
+  const result = addProductToCart(product);
+  if (!result) {
+    search.select();
+    return;
+  }
+
+  search.value = "";
+  filterProducts();
+  if (result === "measure") {
+    measureReturnFocus = search;
+    setBarcodeStatus(`Enter the quantity or amount for ${product.name}.`);
+    return;
+  }
+  setBarcodeStatus(`Added ${product.name}. Quantity: ${cart.get(product.name).quantity}.`);
+  search.focus({ preventScroll: true });
 }
 
 function filterProducts() {
   const query = search.value.toLowerCase().trim();
+  const matches = (product) =>
+    product.dataset.name.toLowerCase().includes(query) ||
+    product.dataset.barcode.toLowerCase().includes(query);
 
   let visible = 0;
 
   productCards.forEach((product) => {
-    const match = product.dataset.name.toLowerCase().includes(query);
+    const match = matches(product);
 
     const group = productsSection.querySelector(
       `.checkout-category[data-category="${CSS.escape(
@@ -778,7 +833,7 @@ function filterProducts() {
     group.style.display = productCards.some(
       (product) =>
         product.dataset.category === group.dataset.category &&
-        product.dataset.name.toLowerCase().includes(query),
+        matches(product),
     )
       ? ""
       : "none";
@@ -807,6 +862,13 @@ receiptDate.textContent = new Date().toLocaleString("en-US", {
 ========================================================= */
 
 search.addEventListener("input", filterProducts);
+search.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.isComposing) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!event.repeat) addScannedBarcode();
+  }
+});
 
 productsSection.addEventListener("click", (event) => {
   const group = event.target.closest(".checkout-category");
@@ -1178,6 +1240,10 @@ sellButton.addEventListener("click", () => {
 
   refreshSukiSelector();
   saleInProgress = false;
+  search.value = "";
+  filterProducts();
+  setBarcodeStatus("Sale complete. Ready to scan the next product.");
+  search.focus({ preventScroll: true });
 });
 
 /* =========================================================
@@ -1332,3 +1398,5 @@ renderProducts();
 renderCart();
 
 refreshSukiSelector();
+
+search.focus({ preventScroll: true });

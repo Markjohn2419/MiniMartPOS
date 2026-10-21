@@ -296,3 +296,17 @@ html[data-theme="dark"] .inventory-page .icon-option.selected {
     overflow-y: auto;
   }
 }
+.inventory-page .barcode-field {
+  margin-top: 15px;
+}
+.inventory-page .product-modal {
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+.inventory-page .product-barcode {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
