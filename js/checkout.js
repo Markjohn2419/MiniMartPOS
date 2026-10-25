@@ -780,7 +780,7 @@ function addScannedBarcode() {
   if (matches.length !== 1) {
     setBarcodeStatus(matches.length > 1
       ? "This barcode belongs to multiple products. Correct it in Inventory."
-      : `Barcode ${barcode} is not registered. Add it to a product in Inventory.`, true);
+      : "This barcode is not registered. Add it to a product in Inventory.", true);
     search.select();
     return;
   }
@@ -804,10 +804,11 @@ function addScannedBarcode() {
 }
 
 function filterProducts() {
-  const query = search.value.toLowerCase().trim();
+  const rawQuery = search.value.trim();
+  const query = rawQuery.toLowerCase();
   const matches = (product) =>
-    product.dataset.name.toLowerCase().includes(query) ||
-    product.dataset.barcode.toLowerCase().includes(query);
+    product.dataset.name.toLowerCase().startsWith(query) ||
+    (rawQuery !== "" && product.dataset.barcode === rawQuery);
 
   let visible = 0;
 

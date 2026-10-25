@@ -22,6 +22,11 @@ const categoryHelp = document.getElementById("categoryHelp");
 const productName = document.getElementById("productName");
 const productBarcode = document.getElementById("productBarcode");
 const productBarcodeError = document.getElementById("productBarcodeError");
+const productLookupSection = document.getElementById("productLookupSection");
+const productLookup = document.getElementById("productLookup");
+const productLookupResults = document.getElementById("productLookupResults");
+const productLookupStatus = document.getElementById("productLookupStatus");
+const useLookupBarcode = document.getElementById("useLookupBarcode");
 const productPrice = document.getElementById("productPrice");
 const productCost = document.getElementById("productCost");
 const productStock = document.getElementById("productStock");
@@ -102,7 +107,11 @@ function hasProductHistory(product) {
 
 function validateForm() {
   setFieldError(categoryName, categoryNameError, categoryName.value.trim() ? "" : "Category name is required.");
-  setFieldError(productName, productNameError, productName.value.trim() ? "" : "Product name is required.");
+  const name = productName.value.trim();
+  const sameName = window.miniMartDB.products().find((entry) =>
+    entry.name !== editingName && entry.name.toLowerCase() === name.toLowerCase(),
+  );
+  setFieldError(productName, productNameError, !name ? "Product name is required." : sameName ? "This product already exists. Find it above to edit its stock or details." : "");
   const barcode = productBarcode.value.trim();
   const duplicate = barcode && window.miniMartDB.products().find((entry) =>
     entry.name !== editingName && String(entry.barcode || "").trim() === barcode,
@@ -137,7 +146,7 @@ function categoryIconPath(category) {
 function updateCategoryOptions() {
   document.getElementById("categoryOptions").innerHTML = window.miniMartDB
     .categories()
-    .map((category) => `<option value="${category}"></option>`)
+    .map((category) => `<option value="${escapeHtml(category)}"></option>`)
     .join("");
 }
 
@@ -165,7 +174,7 @@ function renderRows() {
         .sort((first, second) => first.name.localeCompare(second.name));
       const safeCategory = escapeHtml(category);
       const categoryUnit = window.miniMartDB.categoryDefaultUnit(category);
-      const header = `<tr class="category-group" style="--accent:${categoryAccent(category)}" data-category="${safeCategory}" data-open="false" tabindex="0" aria-expanded="false"><td colspan="6"><span><img src="${categoryIconPath(category)}" alt="" /></span><strong>${safeCategory}</strong><small>${categoryProducts.length} products</small>${categoryUnit !== "piece" ? `<em class="unit-tag">${unitLabel(categoryUnit)}</em>` : ""}<b>＋</b></td></tr>`;
+      const header = `<tr class="category-group" style="--accent:${categoryAccent(category)}" data-category="${safeCategory}" data-open="false" tabindex="0" aria-expanded="false"><td colspan="6"><span><img src="${categoryIconPath(category)}" alt="" /></span><strong>${safeCategory}</strong><small>${categoryProducts.length} products</small>${categoryUnit !== "piece" ? `<em class="unit-tag">${unitLabel(categoryUnit)}</em>` : ""}<button type="button" class="category-add-product" data-add-category="${safeCategory}" aria-label="Add product to ${safeCategory}">＋ Add product</button><b>＋</b></td></tr>`;
       const productRows = categoryProducts
         .map(
           (product) => {
@@ -175,7 +184,7 @@ function renderRows() {
               unit === "piece"
                 ? String(window.miniMartDB.roundQuantity(product.stock, unit))
                 : window.miniMartDB.formatQuantity(product.stock, unit);
-            return `<tr data-product="${escapeHtml(product.name)}" data-category="${escapeHtml(product.category)}" data-barcode="${escapeHtml(product.barcode || "")}"><td>${escapeHtml(product.name)}${product.barcode ? `<small class="product-barcode">Barcode: ${escapeHtml(product.barcode)}</small>` : ""}</td><td><span class="category-label" style="--accent:${categoryAccent(product.category)}"><img src="${categoryIconPath(product.category)}" alt="" />${escapeHtml(product.category)}</span></td><td class="inventory-price">${window.miniMartDB.isKnownCost(product.costPrice) ? window.miniMartSettings.formatCurrency(product.costPrice) : "—"}</td><td class="inventory-price">${price}${unit === "piece" ? "" : ` / ${unitLabel(unit)}`}</td><td class="inventory-stock">${stock}</td><td class="row-actions"><button class="edit-action" type="button">♢ Edit</button><button class="delete-action" type="button">♧ Delete</button></td></tr>`;
+            return `<tr data-product="${escapeHtml(product.name)}" data-category="${escapeHtml(product.category)}" data-barcode="${escapeHtml(product.barcode || "")}"><td><label class="select-products-label"><input class="product-select" type="checkbox" data-select-product="${escapeHtml(product.name)}" aria-label="Select ${escapeHtml(product.name)}" /><span>${escapeHtml(product.name)}</span></label></td><td><span class="category-label" style="--accent:${categoryAccent(product.category)}"><img src="${categoryIconPath(product.category)}" alt="" />${escapeHtml(product.category)}</span></td><td class="inventory-price">${window.miniMartDB.isKnownCost(product.costPrice) ? window.miniMartSettings.formatCurrency(product.costPrice) : "—"}</td><td class="inventory-price">${price}${unit === "piece" ? "" : ` / ${unitLabel(unit)}`}</td><td class="inventory-stock">${stock}</td><td class="row-actions"><button class="edit-action" type="button">♢ Edit</button><button class="delete-action" type="button">♧ Delete</button></td></tr>`;
           },
         )
         .join("");
@@ -187,10 +196,11 @@ function renderRows() {
 }
 
 function updateVisibleRows() {
-  const query = search.value.toLowerCase().trim();
+  const rawQuery = search.value.trim();
+  const query = rawQuery.toLowerCase();
   const matches = (row) =>
-    row.dataset.product.toLowerCase().includes(query) ||
-    row.dataset.barcode.toLowerCase().includes(query);
+    row.dataset.product.toLowerCase().startsWith(query) ||
+    (rawQuery !== "" && row.dataset.barcode === rawQuery);
   let visible = 0;
   rows.forEach((row) => {
     const match = matches(row);
@@ -214,6 +224,88 @@ function updateVisibleRows() {
   });
   count.textContent = query ? visible : rows.length;
   noProducts.style.display = visible === 0 ? "block" : "none";
+  document.dispatchEvent(new CustomEvent("miniMartInventoryViewChanged"));
+}
+
+function setLookupStatus(message, isError = false) {
+  productLookupStatus.textContent = message;
+  productLookupStatus.classList.toggle("is-error", isError);
+}
+
+function resetProductLookup() {
+  productLookupSection.hidden = modalMode === "create-category";
+  productLookup.value = "";
+  productLookupResults.innerHTML = "";
+  productLookupResults.hidden = true;
+  useLookupBarcode.hidden = true;
+  setLookupStatus("");
+  [
+    [categoryName, categoryNameError], [productName, productNameError],
+    [productBarcode, productBarcodeError], [productCost, productCostError],
+    [productPrice, productPriceError], [productStock, productStockError],
+  ].forEach(([field, error]) => setFieldError(field, error, ""));
+}
+
+function lookupMatches(value) {
+  const query = value.trim();
+  if (!query) return [];
+  return window.miniMartDB.products().filter((entry) =>
+    entry.name.toLowerCase().startsWith(query.toLowerCase()) ||
+    String(entry.barcode || "").trim() === query,
+  ).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function renderLookupResults() {
+  const query = productLookup.value.trim();
+  const matches = lookupMatches(query);
+  productLookupResults.innerHTML = matches.map((product) =>
+    `<li><button type="button" data-lookup-name="${escapeHtml(product.name)}"><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.category)} · ${window.miniMartSettings.formatCurrency(product.price)} / ${unitLabel(product.unit)} · ${window.miniMartDB.formatQuantity(product.stock, product.unit)} in stock</small></button></li>`,
+  ).join("");
+  productLookupResults.hidden = matches.length === 0;
+  useLookupBarcode.hidden = !query || matches.length > 0;
+  setLookupStatus(!query ? "" : matches.length
+    ? `${matches.length} matching product${matches.length === 1 ? "" : "s"}. Choose one to edit it.`
+    : "No matching product. Use this as a new barcode, or enter the product details below.");
+}
+
+function loadLookupProduct(product, scanned = false) {
+  openModal(product);
+  if (scanned) productBarcode.type = "text";
+  setLookupStatus(`Found ${product.name} in ${product.category}. You are editing this existing product. Stock is the total on hand.`);
+  productStock.focus();
+  productStock.select();
+}
+
+function useNewBarcode(value) {
+  const barcode = value.trim();
+  if (!barcode) return;
+  // Looking up a new code while editing must not replace an existing product's identity.
+  if (modalMode === "edit-product") openProductModal(categoryName.value);
+  productBarcode.type = "text";
+  productBarcode.value = barcode;
+  setFieldError(productBarcode, productBarcodeError, "");
+  productLookup.value = "";
+  productLookupResults.hidden = true;
+  useLookupBarcode.hidden = true;
+  setLookupStatus("New barcode captured. Enter the product name, cost, price and stock, then save.");
+  productName.focus();
+}
+
+function findLookupProduct() {
+  const query = productLookup.value.trim();
+  if (!query) return;
+  const matches = window.miniMartDB.products().filter((entry) => String(entry.barcode || "").trim() === query);
+  if (matches.length > 1) {
+    setLookupStatus("This barcode belongs to multiple products. Correct their barcodes before using it.", true);
+    return;
+  }
+  if (matches.length === 1) return loadLookupProduct(matches[0], true);
+  const names = lookupMatches(query);
+  const exactName = names.find((entry) => entry.name.toLowerCase() === query.toLowerCase());
+  if (exactName || names.length === 1) return loadLookupProduct(exactName || names[0]);
+  if (!names.length && /^[^\s]+$/.test(query) && /\d/.test(query)) return useNewBarcode(query);
+  renderLookupResults();
+  productLookupResults.querySelector("button")?.focus();
 }
 
 function openModal(product) {
@@ -235,6 +327,7 @@ function openModal(product) {
     : "Create the category and add its first product.";
   productName.value = product?.name || "";
   productBarcode.value = product?.barcode || "";
+  productBarcode.type = product?.barcode ? "password" : "text";
   setFieldError(productBarcode, productBarcodeError, "");
   productCost.value = window.miniMartDB.isKnownCost(product?.costPrice)
     ? product.costPrice
@@ -254,6 +347,7 @@ function openModal(product) {
     ? categoryIconPath(product.category)
     : "Icons/bread.png";
   updateIconPicker();
+  resetProductLookup();
   modal.hidden = false;
   productName.focus();
 }
@@ -274,6 +368,7 @@ function openProductModal(category) {
     : "Add a product to an existing or new category.";
   productName.value = "";
   productBarcode.value = "";
+  productBarcode.type = "text";
   setFieldError(productBarcode, productBarcodeError, "");
   productCost.value = "";
   productPrice.value = "";
@@ -284,8 +379,10 @@ function openProductModal(category) {
   categoryUnitField.hidden = false;
   updateProductUnitUi();
   lossConfirm.checked = false;
+  resetProductLookup();
   modal.hidden = false;
-  productName.focus();
+  modal.querySelector(".product-modal").scrollTop = 0;
+  productLookup.focus({ preventScroll: true });
 }
 
 function closeModal() {
@@ -306,18 +403,69 @@ function closeModal() {
 }
 
 renderRows();
+document.addEventListener("miniMartInventoryRefresh", renderRows);
+window.addEventListener("storage", (event) => {
+  if (event.key === null || ["miniMartProducts", "miniMartCategories"].includes(event.key)) renderRows();
+});
 search.addEventListener("input", updateVisibleRows);
-productBarcode.addEventListener("input", () => setFieldError(productBarcode, productBarcodeError, ""));
+search.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.isComposing) return;
+  event.preventDefault();
+  const matches = window.miniMartDB.products().filter((entry) => String(entry.barcode || "").trim() === search.value.trim());
+  if (matches.length === 1) {
+    // After a complete scan, show the product's name rather than its barcode.
+    search.value = matches[0].name;
+    updateVisibleRows();
+    search.select();
+  }
+});
+productLookup.addEventListener("input", renderLookupResults);
+productLookup.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.isComposing) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!event.repeat) findLookupProduct();
+  }
+  if (event.key === "ArrowDown") {
+    const first = productLookupResults.querySelector("button");
+    if (first && !productLookupResults.hidden) { event.preventDefault(); first.focus(); }
+  }
+});
+productLookupResults.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-lookup-name]");
+  if (!button) return;
+  const product = window.miniMartDB.products().find((entry) => entry.name === button.dataset.lookupName);
+  if (product) loadLookupProduct(product, String(product.barcode || "").trim() === productLookup.value.trim());
+});
+useLookupBarcode.addEventListener("click", () => useNewBarcode(productLookup.value));
+productBarcode.addEventListener("input", () => {
+  productBarcode.type = "text";
+  setFieldError(productBarcode, productBarcodeError, "");
+});
+productBarcode.addEventListener("focus", () => productBarcode.select());
 productBarcode.addEventListener("keydown", (event) => {
   // A scanner's Enter suffix must not save a partially completed product form.
-  if (event.key === "Enter") {
+  if (event.key === "Enter" && !event.isComposing) {
     event.preventDefault();
+    event.stopPropagation();
+    if (event.repeat) return;
     productBarcode.value = productBarcode.value.trim();
+    productBarcode.type = "text";
+    const barcode = productBarcode.value;
+    const matches = barcode ? window.miniMartDB.products().filter((entry) => String(entry.barcode || "").trim() === barcode) : [];
+    if (matches.length === 1 && modalMode === "add-product" && ![productName, productCost, productPrice, productStock].some((field) => field.value.trim())) {
+      loadLookupProduct(matches[0], true);
+      return;
+    }
+    const duplicate = matches.find((entry) => entry.name !== editingName);
+    setFieldError(productBarcode, productBarcodeError, duplicate ? `This barcode is already assigned to ${duplicate.name}. Find that product above to edit it.` : "");
     productBarcode.select();
   }
 });
 
 tbody.addEventListener("click", (event) => {
+  const addButton = event.target.closest("[data-add-category]");
+  if (addButton) { openProductModal(addButton.dataset.addCategory); return; }
   const group = event.target.closest(".category-group");
   if (group) {
     const open = group.dataset.open === "true";
@@ -369,7 +517,7 @@ deleteProductModal.addEventListener("click", (event) => {
 
 tbody.addEventListener("keydown", (event) => {
   const group = event.target.closest(".category-group");
-  if (group && (event.key === "Enter" || event.key === " ")) {
+  if (group && event.target === group && (event.key === "Enter" || event.key === " ")) {
     event.preventDefault();
     group.click();
   }

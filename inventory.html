@@ -77,7 +77,7 @@
           <input
             id="inventorySearch"
             type="search"
-            placeholder="Search products or barcodes..."
+            placeholder="Type the start of a name or scan a barcode..."
             aria-label="Search inventory"
             name="mini-mart-inventory-search"
             autocomplete="off"
@@ -85,11 +85,19 @@
             spellcheck="false"
           />
         </div>
+        <div class="bulk-toolbar" aria-label="Product selection">
+          <p id="selectionSummary" role="status">Select products to edit together.</p>
+          <div class="bulk-toolbar-actions">
+            <button id="clearProductSelection" class="bulk-secondary" type="button" disabled>Clear selection</button>
+            <button id="editSelectedProducts" class="bulk-primary" type="button" disabled>Bulk edit (0)</button>
+          </div>
+        </div>
+        <p class="inventory-notice" id="inventoryNotice" role="status" hidden></p>
         <div class="inventory-table-wrap">
           <table class="inventory-table">
             <thead>
               <tr>
-                <th>Name</th>
+                <th><label class="select-products-label"><input id="selectVisibleProducts" type="checkbox" aria-label="Select all visible products" /> Name</label></th>
                 <th>Category</th>
                 <th>Cost</th>
                 <th>Price</th>
@@ -97,83 +105,7 @@
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="inventoryRows">
-              <tr data-product="Coke 1.5L">
-                <td>Coke 1.5L</td>
-                <td>
-                  <span class="category-label" style="--accent: var(--blue)"
-                    >▣ Beverages</span
-                  >
-                </td>
-                <td class="inventory-price">&#8369;52.00</td>
-                <td class="inventory-price">&#8369;65.00</td>
-                <td class="inventory-stock">23</td>
-                <td class="row-actions">
-                  <button class="edit-action" type="button">♢ Edit</button
-                  ><button class="delete-action" type="button">♧ Delete</button>
-                </td>
-              </tr>
-              <tr data-product="Lucky Me Pancit Canton">
-                <td>Lucky Me Pancit Canton</td>
-                <td>
-                  <span class="category-label" style="--accent: var(--red)"
-                    >⌁ Instant Food</span
-                  >
-                </td>
-                <td class="inventory-price">&#8369;11.00</td>
-                <td class="inventory-price">&#8369;15.00</td>
-                <td class="inventory-stock">50</td>
-                <td class="row-actions">
-                  <button class="edit-action" type="button">♢ Edit</button
-                  ><button class="delete-action" type="button">♧ Delete</button>
-                </td>
-              </tr>
-              <tr data-product="Piattos 40g">
-                <td>Piattos 40g</td>
-                <td>
-                  <span class="category-label" style="--accent: var(--gold)"
-                    >◉ Snacks</span
-                  >
-                </td>
-                <td class="inventory-price">&#8369;16.00</td>
-                <td class="inventory-price">&#8369;22.00</td>
-                <td class="inventory-stock">29</td>
-                <td class="row-actions">
-                  <button class="edit-action" type="button">♢ Edit</button
-                  ><button class="delete-action" type="button">♧ Delete</button>
-                </td>
-              </tr>
-              <tr data-product="Bear Brand 33g">
-                <td>Bear Brand 33g</td>
-                <td>
-                  <span class="category-label" style="--accent: var(--green)"
-                    >♙ Dairy</span
-                  >
-                </td>
-                <td class="inventory-price">&#8369;10.00</td>
-                <td class="inventory-price">&#8369;14.00</td>
-                <td class="inventory-stock">40</td>
-                <td class="row-actions">
-                  <button class="edit-action" type="button">♢ Edit</button
-                  ><button class="delete-action" type="button">♧ Delete</button>
-                </td>
-              </tr>
-              <tr data-product="Skyflakes Crackers">
-                <td>Skyflakes Crackers</td>
-                <td>
-                  <span class="category-label" style="--accent: var(--gold)"
-                    >◉ Snacks</span
-                  >
-                </td>
-                <td class="inventory-price">&#8369;6.00</td>
-                <td class="inventory-price">&#8369;8.00</td>
-                <td class="inventory-stock">60</td>
-                <td class="row-actions">
-                  <button class="edit-action" type="button">♢ Edit</button
-                  ><button class="delete-action" type="button">♧ Delete</button>
-                </td>
-              </tr>
-            </tbody>
+            <tbody id="inventoryRows"></tbody>
           </table>
           <div class="no-products" id="noProducts">No products found.</div>
         </div>
@@ -239,6 +171,16 @@
           </button>
         </div>
         <form id="categoryForm" novalidate>
+          <section class="product-lookup" id="productLookupSection" aria-labelledby="productLookupLabel" hidden>
+            <label id="productLookupLabel" for="productLookup">Find a product or scan a barcode</label>
+            <input id="productLookup" type="search" placeholder="Start typing a name, or scan here"
+              autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+              aria-describedby="productLookupHelp productLookupStatus" aria-controls="productLookupResults" />
+            <p class="field-help" id="productLookupHelp">Choose an existing product to edit it. Scan a new barcode to start a new product.</p>
+            <ul class="lookup-results" id="productLookupResults" aria-label="Matching products" hidden></ul>
+            <p class="lookup-status" id="productLookupStatus" role="status"></p>
+            <button class="bulk-secondary" id="useLookupBarcode" type="button" hidden>Use as new barcode</button>
+          </section>
           <label
             >Category name<input
               id="categoryName"
@@ -280,8 +222,8 @@
               <small class="field-error" id="productBarcodeError"></small>
             </label>
             <p class="modal-help" id="productBarcodeHelp">
-              Scan or type the exact code on the packaging, then click Save.
-              Leave blank for products without a barcode.
+              Scan here, then press Enter if needed. Barcode values appear only in this form.
+              Leave blank for products without a barcode. Saved codes stay masked until you scan or type.
             </p>
             <div class="modal-fields">
               <label
@@ -410,11 +352,48 @@
         </form>
       </section>
     </div>
+    <div class="modal-backdrop" id="bulkEditModal" hidden>
+      <section class="product-modal bulk-edit-modal" role="dialog" aria-modal="true" aria-labelledby="bulkEditTitle">
+        <div class="modal-header">
+          <div><div class="eyebrow">INVENTORY</div><h2 id="bulkEditTitle">Bulk edit products</h2></div>
+          <button class="modal-close" id="closeBulkEdit" type="button" aria-label="Close bulk editor">×</button>
+        </div>
+        <p class="bulk-help">Edit each row, or fill in common values below and apply them to every selected row. Review before saving.</p>
+        <form id="bulkEditForm" novalidate>
+          <fieldset class="bulk-common">
+            <legend>Common values (optional)</legend>
+            <label>Category<select id="bulkCategory"><option value="">Keep each category</option></select></label>
+            <label>Cost<input id="bulkCost" type="number" min="0" step="0.01" placeholder="Keep current" /></label>
+            <label>Sell price<input id="bulkPrice" type="number" min="0" step="0.01" placeholder="Keep current" /></label>
+            <label>Stock<input id="bulkStock" type="number" min="0" step="0.001" placeholder="Keep current" /></label>
+            <label>Stock action<select id="bulkStockMode"><option value="set">Set total stock</option><option value="add">Add to stock</option></select></label>
+            <button id="applyBulkValues" class="bulk-secondary" type="button">Apply to rows</button>
+          </fieldset>
+          <p class="bulk-help">Stock uses the unit shown on each row. Blank common values leave that column unchanged.</p>
+          <div class="bulk-table-wrap" tabindex="0" role="region" aria-label="Selected products to edit">
+            <table class="bulk-edit-table">
+              <thead><tr><th>Product</th><th>Category</th><th>Cost</th><th>Sell price</th><th>Total stock</th></tr></thead>
+              <tbody id="bulkEditRows"></tbody>
+            </table>
+          </div>
+          <p class="bulk-message" id="bulkEditMessage" role="status" hidden></p>
+          <label class="loss-confirm" id="bulkLossConfirmField" hidden>
+            <input id="bulkLossConfirm" type="checkbox" />
+            <span>I understand that the changed prices will sell some products below cost.</span>
+          </label>
+          <div class="modal-actions">
+            <button class="modal-cancel" id="cancelBulkEdit" type="button">CANCEL</button>
+            <button class="modal-save" id="saveBulkEdit" type="submit">SAVE CHANGES</button>
+          </div>
+        </form>
+      </section>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/auth-client.js"></script>
     <script src="js/settings-store.js"></script>
     <script src="js/database.js"></script>
     <script src="js/inventory.js"></script>
+    <script src="js/inventory-bulk.js"></script>
     <script src="js/navigation.js"></script>
   </body>
 </html>
