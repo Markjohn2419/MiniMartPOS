@@ -14,6 +14,7 @@ const products = window.miniMartDB.products();
 const sales = window.miniMartDB.sales();
 const itemCounts = new Map();
 const categoryCounts = new Map();
+const categoryRevenue = new Map();
 const lastUpdated = document.getElementById("lastUpdated");
 const LOW_STOCK_THRESHOLD = Number.isInteger(
   Number(window.miniMartSettings?.get().lowStockThreshold),
@@ -41,6 +42,35 @@ const CATEGORY_COLORS = {
   Other: "#8a7663",
 };
 
+function escapeHtml(value) {
+  return String(value).replace(/[&<>'"]/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;",
+  })[character]);
+}
+
+function numericValue(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function categoryForItem(item) {
+  const product = products.find((entry) => entry.name === item.name);
+  return item.category || product?.category || "Other";
+}
+
+function orderedCategoryEntriesFrom(map) {
+  return [
+    ...CATEGORY_ORDER.filter((category) => map.has(category)),
+    ...[...map.keys()]
+      .filter((category) => !CATEGORY_ORDER.includes(category))
+      .sort((first, second) => first.localeCompare(second)),
+  ].map((category) => [category, map.get(category)]);
+}
+
 lastUpdated.textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 let reportRefreshPending = false;
 const refreshReports = () => {
@@ -63,14 +93,53 @@ window.addEventListener("miniMartDatabaseChanged", (event) => {
 sales.forEach((sale) =>
   sale.items.forEach((item) => {
     itemCounts.set(item.name, (itemCounts.get(item.name) || 0) + item.quantity);
-    const product = products.find((entry) => entry.name === item.name);
-    const category = product?.category || "Other";
+    const category = categoryForItem(item);
     categoryCounts.set(
       category,
       (categoryCounts.get(category) || 0) + item.quantity,
     );
+    categoryRevenue.set(
+      category,
+      (categoryRevenue.get(category) || 0) +
+        numericValue(
+          item.lineTotal,
+          numericValue(item.price) * numericValue(item.quantity),
+        ),
+    );
   }),
 );
+
+const categoryOverview = new Map();
+products.forEach((product) => {
+  const category = product.category || "Other";
+  const current = categoryOverview.get(category) || {
+    units: categoryCounts.get(category) || 0,
+    revenue: categoryRevenue.get(category) || 0,
+    stock: 0,
+    lowStock: 0,
+  };
+  current.stock += numericValue(product.stock);
+  if (numericValue(product.stock) <= LOW_STOCK_THRESHOLD) current.lowStock += 1;
+  categoryOverview.set(category, current);
+});
+categoryCounts.forEach((units, category) => {
+  if (!categoryOverview.has(category)) {
+    categoryOverview.set(category, {
+      units,
+      revenue: categoryRevenue.get(category) || 0,
+      stock: 0,
+      lowStock: 0,
+    });
+  }
+});
+document.getElementById("categoryOverview").innerHTML =
+  orderedCategoryEntriesFrom(categoryOverview)
+    .map(([category, values]) => {
+      const color = CATEGORY_COLORS[category] || CATEGORY_COLORS.Other;
+      return `<article class="category-overview-card" style="--category-color:${color}" data-category="${escapeHtml(category)}" tabindex="0" role="button" aria-label="View ${escapeHtml(category)} inventory"><h3>${escapeHtml(category)}</h3><strong>${peso(values.revenue)}</strong><small>Revenue</small><div class="category-overview-stats"><span><b>${values.units}</b>Units sold</span><span><b>${values.stock}</b>Current stock</span><span class="${values.lowStock ? "is-low" : ""}"><b>${values.lowStock}</b>Low stock</span><span><b>${categoryCounts.has(category) ? "Active" : "No sales"}</b>Sales status</span></div></article>`;
+    })
+    .join("") ||
+  '<div class="category-overview-card"><h3>No categories yet</h3><small>Add products to see category reports.</small></div>';
 
 const salesByDay = sales.reduce((groups, sale) => {
   const key = new Date(sale.date).toDateString();
@@ -91,7 +160,10 @@ const trendDayStats = trendDays.map((day) => {
   const daySales = salesByDay.get(key) || [];
   return {
     day,
-    revenue: daySales.reduce((sum, sale) => sum + sale.total, 0),
+    revenue: daySales.reduce(
+      (sum, sale) => sum + numericValue(sale.total),
+      0,
+    ),
     transactions: daySales.length,
     items: daySales.reduce(
       (sum, sale) =>
@@ -192,7 +264,7 @@ document.getElementById("lowStockList").innerHTML =
   lowStockProducts
     .map(
       (product) =>
-        `<div class="low-stock-row"><span><strong>${product.name}</strong><small>${product.category} · ${peso(product.price)} per unit</small></span><b class="low-stock-amount">${product.stock} left</b></div>`,
+        `<div class="low-stock-row"><span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.category)} · ${peso(product.price)} per unit</small></span><b class="low-stock-amount">${product.stock} left</b></div>`,
     )
     .join("") ||
   '<div class="low-stock-empty">All products have healthy stock levels.</div>';
@@ -247,7 +319,7 @@ document.getElementById("topProducts").innerHTML =
   topProducts
     .map(
       ([name, quantity], index) =>
-        `<li><span class="rank-badge rank-${index + 1}">${String(index + 1).padStart(2, "0")}</span><span class="product-name">${name}</span><span class="product-meter" style="--fill:${Math.round((quantity / maxSold) * 100)}%"><i></i></span><span class="report-quantity">${quantity} sold</span></li>`,
+      `<li><span class="rank-badge rank-${index + 1}">${String(index + 1).padStart(2, "0")}</span><span class="product-name">${escapeHtml(name)}</span><span class="product-meter" style="--fill:${Math.round((quantity / maxSold) * 100)}%"><i></i></span><span class="report-quantity">${quantity} sold</span></li>`,
     )
     .join("") ||
   `<li><span class="rank-badge">--</span><span class="product-name">No sales yet</span><span class="product-meter"><i></i></span><span class="report-quantity">0 sold</span></li>`;
@@ -257,9 +329,7 @@ const categoryTotal = [...categoryCounts.values()].reduce(
   0,
 );
 let categoryPosition = 0;
-const orderedCategoryEntries = CATEGORY_ORDER.filter((category) =>
-  categoryCounts.has(category),
-).map((category) => [category, categoryCounts.get(category)]);
+const orderedCategoryEntries = orderedCategoryEntriesFrom(categoryCounts);
 const categoryStops = orderedCategoryEntries
   .map(([category, amount]) => {
     const start = categoryPosition;
@@ -275,7 +345,7 @@ document.getElementById("categoryLegend").innerHTML =
   orderedCategoryEntries
     .map(
       ([category, amount]) =>
-        `<span style="--legend:${CATEGORY_COLORS[category] || CATEGORY_COLORS.Other}"><i></i><b>${category}</b><em>${categoryTotal ? Math.round((amount / categoryTotal) * 100) : 0}%</em></span>`,
+        `<span style="--legend:${CATEGORY_COLORS[category] || CATEGORY_COLORS.Other}"><i></i><b>${escapeHtml(category)}</b><em>${categoryTotal ? Math.round((amount / categoryTotal) * 100) : 0}%</em></span>`,
     )
     .join("") ||
   '<span style="--legend:#d9d7cd"><i></i><b>No sales</b><em>0%</em></span>';
@@ -322,12 +392,10 @@ function renderStackedChart(
           const totals = {};
           bucket.sales.forEach((sale) =>
             sale.items.forEach((item) => {
-              const product = products.find(
-                (entry) => entry.name === item.name,
-              );
-              const category = product?.category || "Other";
+              const category = categoryForItem(item);
               totals[category] =
-                (totals[category] || 0) + item.price * item.quantity;
+                (totals[category] || 0) +
+                numericValue(item.lineTotal, numericValue(item.price) * numericValue(item.quantity));
             }),
           );
           return totals;
@@ -357,12 +425,12 @@ function renderStackedChart(
   const bars = values
     .map(
       (value, index) =>
-        `<div class="period-column" data-value="${totals[index]}" data-period="${labels[index]}"><div class="period-stack">${Object.entries(
+        `<div class="period-column" data-value="${totals[index]}" data-period="${escapeHtml(labels[index])}"><div class="period-stack">${Object.entries(
           value,
         )
           .map(
             ([category, amount]) =>
-              `<i style="height:${(amount / chartMax) * 125}px;background:${
+              `<i aria-hidden="true" style="height:${(amount / chartMax) * 125}px;background:${
                 metric === "transactions"
                   ? "var(--blue)"
                   : colors[category] || "#8a7663"
@@ -478,9 +546,9 @@ const categoryInventory = [
     return groups;
   }, new Map()),
 ];
-const orderedCategoryInventory = CATEGORY_ORDER.filter((category) =>
-  categoryInventory.some(([name]) => name === category),
-).map((category) => categoryInventory.find(([name]) => name === category));
+const orderedCategoryInventory = orderedCategoryEntriesFrom(
+  new Map(categoryInventory),
+);
 const maxStock = Math.max(
   ...orderedCategoryInventory.map(([, values]) => values.total),
   1,
@@ -490,7 +558,7 @@ inventoryBarsElement.innerHTML = orderedCategoryInventory
   .map(([category, values]) => {
     const height = Math.max((values.total / maxStock) * 100, 4);
     const thresholdHeight = (LOW_STOCK_THRESHOLD / maxStock) * 100;
-    return `<button type="button" class="inventory-bar ${values.lowItems.length ? "is-low" : ""}" data-category="${category}" data-low-count="${values.lowItems.length}" title="${category}: ${values.total} units across products"><strong>${values.total}</strong><div class="bar-stack"><span class="bar-stock" style="height:${height}%;background:${CATEGORY_COLORS[category] || CATEGORY_COLORS.Other}"></span><span class="bar-threshold" style="bottom:${Math.min(thresholdHeight, 100)}%"></span></div><span>${category}</span></button>`;
+    return `<button type="button" class="inventory-bar ${values.lowItems.length ? "is-low" : ""}" data-category="${escapeHtml(category)}" data-low-count="${values.lowItems.length}" title="${escapeHtml(category)}: ${values.total} units across products"><strong>${values.total}</strong><div class="bar-stack"><span class="bar-stock" style="height:${height}%;background:${CATEGORY_COLORS[category] || CATEGORY_COLORS.Other}"></span><span class="bar-threshold" style="bottom:${Math.min(thresholdHeight, 100)}%"></span></div><span>${escapeHtml(category)}</span></button>`;
   })
   .join("");
 
@@ -510,7 +578,7 @@ const highlightLowStockCategory = (category) => {
     .sort((first, second) => first.stock - second.stock)
     .map(
       (product) =>
-        `<div class="low-stock-row"><span><strong>${product.name}</strong><small>${product.category} · ${peso(product.price)} per unit</small></span><b class="low-stock-amount">${product.stock} left</b></div>`,
+        `<div class="low-stock-row"><span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.category)} · ${peso(product.price)} per unit</small></span><b class="low-stock-amount">${product.stock} left</b></div>`,
     )
     .join("");
   document.getElementById("lowStockTitle").textContent =
@@ -524,6 +592,27 @@ const highlightLowStockCategory = (category) => {
 inventoryBarsElement.querySelectorAll(".inventory-bar").forEach((bar) => {
   bar.addEventListener("click", () => {
     highlightLowStockCategory(bar.dataset.category);
+  });
+
+  function focusCategoryInventory(category) {
+    const bar = [...inventoryBarsElement.querySelectorAll(".inventory-bar")].find(
+      (entry) => entry.dataset.category === category,
+    );
+    if (!bar) return;
+    [...inventoryBarsElement.querySelectorAll(".inventory-bar")].forEach((entry) => {
+      entry.classList.toggle("active", entry === bar);
+    });
+    bar.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  document.querySelectorAll(".category-overview-card[data-category]").forEach((card) => {
+    const activate = () => focusCategoryInventory(card.dataset.category);
+    card.addEventListener("click", activate);
+    card.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      activate();
+    });
   });
 });
 
@@ -556,7 +645,7 @@ document.getElementById("recentSales").innerHTML =
       const items = sale.items
         .map((item) => `${item.name} x${item.quantity}`)
         .join(", ");
-      return `<div class="sale-row"><div class="sale-details"><div class="sale-date">${new Date(sale.date).toLocaleString()}</div><div>${items}</div></div><strong class="sale-total">${peso(sale.total)}</strong></div>`;
+      return       `<div class="sale-row"><div class="sale-details"><div class="sale-date">${new Date(sale.date).toLocaleString()}</div><div>${escapeHtml(items)}</div></div><strong class="sale-total">${peso(sale.total)}</strong></div>`;
     })
     .join("") || `<div class="sale-details">No sales recorded yet.</div>`;
 
@@ -689,8 +778,7 @@ sales.forEach((sale) => {
   (sale.items || []).forEach((item) => {
     const row = lineEconomics(item);
     if (!row.known) return;
-    const product = products.find((entry) => entry.name === item.name);
-    const category = product?.category || "Other";
+    const category = categoryForItem(item);
     profitByCategory.set(
       category,
       (profitByCategory.get(category) || 0) + row.profit,
@@ -701,12 +789,9 @@ const profitCategoryTotal = [...profitByCategory.values()].reduce(
   (sum, value) => sum + value,
   0,
 );
-const orderedProfitCategories = [
-  ...CATEGORY_ORDER.filter((category) => profitByCategory.has(category)),
-  ...[...profitByCategory.keys()].filter(
-    (category) => !CATEGORY_ORDER.includes(category),
-  ),
-];
+const orderedProfitCategories = orderedCategoryEntriesFrom(profitByCategory).map(
+  ([category]) => category,
+);
 let profitCategoryPosition = 0;
 const profitCategoryStops = orderedProfitCategories
   .map((category) => {
@@ -729,7 +814,7 @@ document.getElementById("profitCategoryLegend").innerHTML =
   orderedProfitCategories
     .map((category) => {
       const amount = profitByCategory.get(category) || 0;
-      return `<span style="--legend:${CATEGORY_COLORS[category] || CATEGORY_COLORS.Other}"><i></i><b>${category}</b><em>${profitCategoryTotal ? Math.round((amount / profitCategoryTotal) * 100) : 0}%</em></span>`;
+      return `<span style="--legend:${CATEGORY_COLORS[category] || CATEGORY_COLORS.Other}"><i></i><b>${escapeHtml(category)}</b><em>${profitCategoryTotal ? Math.round((amount / profitCategoryTotal) * 100) : 0}%</em></span>`;
     })
     .join("") ||
   '<span style="--legend:#d9d7cd"><i></i><b>No cost data</b><em>0%</em></span>';
@@ -830,7 +915,7 @@ function renderProfitProductTable() {
             ? ' class="is-partial"'
             : ""
           : ' class="no-cost"';
-        return `<tr${rowClass}${note}><td>${row.name}</td><td>${row.units}</td><td>${peso(row.revenue)}</td><td>${costCell}</td><td>${profitCell}</td><td>${marginCell}</td></tr>`;
+        return `<tr${rowClass}${note}><td>${escapeHtml(row.name)}</td><td>${row.units}</td><td>${peso(row.revenue)}</td><td>${costCell}</td><td>${profitCell}</td><td>${marginCell}</td></tr>`;
       })
       .join("") ||
     `<tr class="no-cost"><td colspan="6">No sales recorded yet.</td></tr>`;

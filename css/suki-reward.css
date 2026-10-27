@@ -59,6 +59,42 @@ html[data-theme="dark"] .suki-page .suki-modal {
   border-color: #46534b;
 }
 
+html[data-theme="dark"] .suki-page .nfc-reader-card,
+html[data-theme="dark"] .suki-page .suki-list-item,
+html[data-theme="dark"] .suki-page .suki-card,
+html[data-theme="dark"] .suki-page .suki-dialog,
+html[data-theme="dark"] .suki-page .suki-modal-content,
+html[data-theme="dark"] .suki-page .empty-results {
+  background: var(--surface-raised);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .suki-card-name,
+html[data-theme="dark"] .suki-page .suki-card strong,
+html[data-theme="dark"] .suki-page .dialog-heading h2,
+html[data-theme="dark"] .suki-page .field-label,
+html[data-theme="dark"] .suki-page .detail-content strong,
+html[data-theme="dark"] .suki-page .suki-history-main {
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .suki-card-phone,
+html[data-theme="dark"] .suki-page .suki-card small,
+html[data-theme="dark"] .suki-page .suki-search,
+html[data-theme="dark"] .suki-page .suki-dialog p,
+html[data-theme="dark"] .suki-page .detail-content small,
+html[data-theme="dark"] .suki-page .suki-history-details {
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .suki-page .field-label input,
+html[data-theme="dark"] .suki-page .suki-search input {
+  background: var(--field);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
 html[data-theme="dark"] .suki-page .add-suki-button,
 html[data-theme="dark"] .suki-page .nfc-button,
 html[data-theme="dark"] .suki-page .primary-nfc-button,
@@ -158,6 +194,49 @@ html[data-theme="dark"] .suki-page .save-button {
 
 .suki-view {
   width: 100%;
+}
+
+.suki-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.suki-overview-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-top: 3px solid #2864e8;
+  border-radius: 8px;
+  background: var(--white);
+  box-shadow: 0 5px 16px rgba(34, 55, 90, 0.05);
+}
+
+.suki-overview-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.suki-overview-card strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--ink);
+  font-size: 24px;
+}
+
+@media (max-width: 700px) {
+  .suki-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 400px) {
+  .suki-overview {
+    grid-template-columns: 1fr;
+  }
 }
 
 .suki-view[hidden] {
@@ -551,6 +630,32 @@ html[data-theme="dark"] .suki-page .save-button {
   font-size: 14px;
 }
 
+.suki-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -3px 0 15px;
+}
+
+.suki-filter {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.suki-filter:hover,
+.suki-filter:focus-visible,
+.suki-filter.is-active {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, var(--surface-raised));
+  color: var(--red);
+}
+
 /* =========================================================
    SUKI LIST
 ========================================================= */
@@ -650,8 +755,62 @@ html[data-theme="dark"] .suki-page .suki-toast {
   color: var(--muted);
 }
 
+html[data-theme="dark"] .suki-page .suki-filter {
+  background: var(--surface-raised);
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+html[data-theme="dark"] .suki-page .suki-filter.is-active,
+html[data-theme="dark"] .suki-page .suki-filter:hover {
+  background: color-mix(in srgb, var(--red) 16%, var(--surface-raised));
+  border-color: var(--red);
+  color: var(--red);
+}
+
 .suki-card > div:first-child {
   min-width: 0;
+}
+
+.suki-card-main {
+  flex: 1;
+}
+
+.suki-card-status {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.suki-card-status.is-ready {
+  background: color-mix(in srgb, #2f9e63 14%, var(--surface-raised));
+  color: #237748;
+}
+
+.suki-card-status.is-inactive {
+  background: color-mix(in srgb, var(--red) 12%, var(--surface-raised));
+  color: var(--red);
+}
+
+.suki-card-progress {
+  height: 5px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.suki-card-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--red);
 }
 
 .suki-card > div:last-child {
@@ -863,6 +1022,60 @@ html[data-theme="dark"] .suki-page .suki-toast {
   color: #18233d;
 
   font-size: 14px;
+}
+
+.phone-input-group {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: stretch;
+  width: 100%;
+  margin-top: 7px;
+  border: 1px solid #d6dce8;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.phone-prefix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 43px;
+  border-right: 1px solid #d6dce8;
+  background: #f5f7fa;
+  color: #333;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.phone-input-group input {
+  min-width: 0;
+  width: 100%;
+  height: 43px;
+  box-sizing: border-box;
+  margin-top: 0;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.phone-input-group:focus-within {
+  border-color: #2864e8;
+  box-shadow: 0 0 0 3px rgba(40, 100, 232, 0.1);
+}
+
+html[data-theme="dark"] .suki-page .phone-prefix {
+  border-color: #46534b;
+  background: var(--field);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .phone-input-group {
+  border-color: #46534b;
+  background: var(--field);
 }
 
 .field-label input:focus {
@@ -1843,6 +2056,20 @@ html[data-theme="dark"] .suki-page .secondary-button,
 html[data-theme="dark"] .suki-page .suki-action-button.secondary {
   background: var(--surface-soft);
   border-color: var(--line);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .field-label input,
+html[data-theme="dark"] .suki-page .suki-search input {
+  background: var(--field);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .suki-page .suki-search,
+html[data-theme="dark"] .suki-page .suki-history-section,
+html[data-theme="dark"] .suki-page .suki-info-section,
+html[data-theme="dark"] .suki-page .suki-reward-section {
   color: var(--ink);
 }
 

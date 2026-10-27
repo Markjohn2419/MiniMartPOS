@@ -285,16 +285,52 @@
             aria-labelledby="allSukisTab"
             hidden
           >
+            <section class="suki-overview" aria-label="Suki rewards summary">
+              <article class="suki-overview-card">
+                <span>Total Customers</span>
+                <strong id="sukiTotalCustomers">0</strong>
+              </article>
+              <article class="suki-overview-card">
+                <span>Active Cards</span>
+                <strong id="sukiActiveCards">0</strong>
+              </article>
+              <article class="suki-overview-card">
+                <span>Ready to Redeem</span>
+                <strong id="sukiReadyRewards">0</strong>
+              </article>
+              <article class="suki-overview-card">
+                <span>Total Rewards</span>
+                <strong id="sukiTotalRewards">₱0.00</strong>
+              </article>
+            </section>
             <label class="suki-search" for="sukiSearch">
               <span aria-hidden="true"> ⌕ </span>
 
               <input
                 id="sukiSearch"
                 type="search"
-                placeholder="Search sukis by name..."
+                placeholder="Search by name, phone, or NFC card"
                 autocomplete="off"
               />
             </label>
+
+            <div class="suki-filters" id="sukiFilters" role="group" aria-label="Filter Suki customers">
+              <button class="suki-filter is-active" type="button" data-suki-filter="all" aria-pressed="true">
+                All
+              </button>
+              <button class="suki-filter" type="button" data-suki-filter="linked" aria-pressed="false">
+                NFC linked
+              </button>
+              <button class="suki-filter" type="button" data-suki-filter="unlinked" aria-pressed="false">
+                No NFC card
+              </button>
+              <button class="suki-filter" type="button" data-suki-filter="ready" aria-pressed="false">
+                Ready to redeem
+              </button>
+              <button class="suki-filter" type="button" data-suki-filter="inactive" aria-pressed="false">
+                Inactive
+              </button>
+            </div>
 
             <div class="suki-list" id="sukiList" aria-live="polite"></div>
           </section>
@@ -367,23 +403,8 @@
 
             <span class="optional"> (optional) </span>
 
-            <div style="display: flex; align-items: stretch; width: 100%">
-              <span
-                aria-hidden="true"
-                style="
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  padding: 0 14px;
-                  border: 1px solid #d6dce8;
-                  border-right: none;
-                  border-radius: 8px 0 0 8px;
-                  background: #f5f7fa;
-                  color: #333;
-                  font-weight: 600;
-                  white-space: nowrap;
-                "
-              >
+            <div class="phone-input-group">
+              <span class="phone-prefix" aria-hidden="true">
                 +63
               </span>
 
@@ -397,7 +418,6 @@
                 maxlength="11"
                 aria-describedby="sukiPhoneError"
                 title="Enter a valid Philippine mobile number with 10 digits, for example 9171234567."
-                style="flex: 1; min-width: 0; border-radius: 0 8px 8px 0"
               />
             </div>
 

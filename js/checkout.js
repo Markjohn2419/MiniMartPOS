@@ -30,6 +30,12 @@ const amountGiven = document.getElementById("amountGiven");
 const changeAmount = document.getElementById("changeAmount");
 
 const paymentError = document.getElementById("paymentError");
+const checkoutConfirmModal = document.getElementById("checkoutConfirmModal");
+const closeCheckoutConfirm = document.getElementById("closeCheckoutConfirm");
+const cancelCheckoutConfirm = document.getElementById("cancelCheckoutConfirm");
+const confirmCheckoutSale = document.getElementById("confirmCheckoutSale");
+const checkoutConfirmItems = document.getElementById("checkoutConfirmItems");
+const checkoutConfirmError = document.getElementById("checkoutConfirmError");
 
 const productsSection = document.getElementById("products");
 
@@ -311,7 +317,10 @@ function saveSukis(sukis) {
 ========================================================= */
 
 function createSukiCheckoutUI() {
-  if (document.getElementById("checkoutSukiPanel")) {
+  if (
+    window.miniMartSettings.get().sukiEnabled === false ||
+    document.getElementById("checkoutSukiPanel")
+  ) {
     return;
   }
 
@@ -578,6 +587,12 @@ function categoryIconPath(category) {
   return window.miniMartDB.categoryIcon(category);
 }
 
+function safeAccent(value) {
+  return /^var\(--[a-z0-9-]+\)$/.test(String(value || ""))
+    ? value
+    : "var(--gold)";
+}
+
 function renderProducts() {
   const products = window.miniMartDB.products();
 
@@ -610,8 +625,8 @@ function renderProducts() {
         const header = `
           <div
             class="checkout-category"
-            style="--accent:${first.accent}"
-            data-category="${category}"
+            style="--accent:${safeAccent(first.accent)}"
+            data-category="${escapeHtml(category)}"
             data-open="false"
             tabindex="0"
             role="button"
@@ -621,7 +636,7 @@ function renderProducts() {
               ${categoryIcon}
             </span>
 
-            <strong>${category}</strong>
+            <strong>${escapeHtml(category)}</strong>
 
             <small>
               ${categoryProducts.length}
@@ -638,13 +653,16 @@ function renderProducts() {
               `
                 <article
                   class="product"
-                  style="--accent:${product.accent}"
-                  data-category="${product.category}"
+                  style="--accent:${safeAccent(product.accent)}"
+                  data-category="${escapeHtml(product.category)}"
                   data-name="${escapeHtml(product.name)}"
                   data-barcode="${escapeHtml(product.barcode || "")}"
                   data-price="${product.price}"
                   data-stock="${product.stock}"
                   data-unit="${product.unit || "piece"}"
+                  tabindex="0"
+                  role="button"
+                  aria-label="Add ${escapeHtml(product.name)} to cart"
                 >
                   <div class="product-head">
                     <span class="product-icon">
@@ -655,7 +673,7 @@ function renderProducts() {
                     </span>
 
                     <span class="category">
-                      ${product.category.toUpperCase()}
+                      ${escapeHtml(product.category.toUpperCase())}
                     </span>
                   </div>
 
@@ -695,6 +713,13 @@ function renderProducts() {
 
   productCards.forEach((product) =>
     product.addEventListener("click", addToCart),
+  );
+  productCards.forEach((product) =>
+    product.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      addToCart.call(product);
+    }),
   );
 
   filterProducts();
@@ -812,8 +837,35 @@ function filterProducts() {
 
   let visible = 0;
 
+  const categoryGroups = [
+    ...productsSection.querySelectorAll(".checkout-category"),
+  ];
+
+  categoryGroups.forEach((group, groupIndex) => {
+    const categoryProducts = productCards
+      .filter((product) => product.dataset.category === group.dataset.category)
+      .sort((first, second) => {
+        const firstName = first.dataset.name.toLowerCase();
+        const secondName = second.dataset.name.toLowerCase();
+        const firstStartsWithQuery =
+          query && firstName.startsWith(query) ? 0 : 1;
+        const secondStartsWithQuery =
+          query && secondName.startsWith(query) ? 0 : 1;
+        if (firstStartsWithQuery !== secondStartsWithQuery) {
+          return firstStartsWithQuery - secondStartsWithQuery;
+        }
+        return firstName.localeCompare(secondName);
+      });
+
+    const nextGroup = categoryGroups[groupIndex + 1];
+    categoryProducts.forEach((product) => {
+      productsSection.insertBefore(product, nextGroup || null);
+    });
+  });
+
   productCards.forEach((product) => {
-    const match = matches(product);
+    const match = matches(product) ||
+      product.dataset.name.toLowerCase().includes(query);
 
     const group = productsSection.querySelector(
       `.checkout-category[data-category="${CSS.escape(
@@ -828,6 +880,7 @@ function filterProducts() {
     if (match) {
       visible += 1;
     }
+
   });
 
   productsSection.querySelectorAll(".checkout-category").forEach((group) => {
@@ -845,18 +898,47 @@ function filterProducts() {
     : "block";
 }
 
+window.addEventListener("miniMartDatabaseChanged", (event) => {
+  if (event.detail?.key !== "miniMartProducts") return;
+
+  const currentNames = new Set(
+    window.miniMartDB.products().map((product) => product.name),
+  );
+  const removedCartItems = [...cart.keys()].filter(
+    (name) => !currentNames.has(name),
+  );
+
+  removedCartItems.forEach((name) => cart.delete(name));
+  renderProducts();
+
+  if (removedCartItems.length) {
+    renderCart();
+    showCheckoutToast(
+      "The product list changed. Removed unavailable items from the cart.",
+    );
+  }
+});
+
+window.addEventListener("storage", (event) => {
+  if (event.key !== SUKI_STORAGE_KEY) return;
+
+  refreshSukiSelector();
+  updatePayment();
+});
+
 /* =========================================================
    RECEIPT DATE
 ========================================================= */
 
-receiptDate.textContent = new Date().toLocaleString("en-US", {
-  month: "numeric",
-  day: "numeric",
-  year: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-  second: "2-digit",
-});
+receiptDate.textContent = new Intl.DateTimeFormat("en-US", {
+timeZone: window.miniMartSettings.get().timezone,
+month: "numeric",
+day: "numeric",
+year: "numeric",
+hour: "numeric",
+minute: "2-digit",
+second: "2-digit",
+}).format(new Date());
 
 /* =========================================================
    PRODUCT EVENTS
@@ -942,7 +1024,58 @@ document.addEventListener("keydown", (event) => {
    SELL / COMPLETE PURCHASE
 ========================================================= */
 
-sellButton.addEventListener("click", () => {
+function openCheckoutConfirmation() {
+  if (!cart.size) return;
+  updatePayment();
+  if (sellButton.disabled) return;
+  const total = getCartTotal();
+  const paid = Number(amountGiven.value);
+  const rewardUsed = Math.max(
+    0,
+    Math.min(Number(document.getElementById("rewardAmount")?.value || 0), total),
+  );
+  const due = Math.max(total - rewardUsed, 0);
+  checkoutConfirmItems.innerHTML = [...cart.values()]
+    .map(
+      (item) =>
+        `<div class="checkout-confirm-item"><span>${escapeHtml(item.name)} <small>×${item.quantity}</small></span><strong>${peso(item.lineTotal ?? item.price * item.quantity)}</strong></div>`,
+    )
+    .join("");
+  document.getElementById("confirmSubtotal").textContent = peso(total);
+  document.getElementById("confirmReward").textContent = peso(rewardUsed);
+  document.getElementById("confirmCash").textContent = peso(paid);
+  document.getElementById("confirmChange").textContent = peso(Math.max(paid - due, 0));
+  document.getElementById("confirmDue").textContent = peso(due);
+  checkoutConfirmError.hidden = true;
+  checkoutConfirmModal.hidden = false;
+  document.body.classList.add("modal-open");
+  closeCheckoutConfirm.focus();
+}
+
+function closeCheckoutConfirmation() {
+  checkoutConfirmModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+sellButton.addEventListener("click", openCheckoutConfirmation);
+closeCheckoutConfirm.addEventListener("click", closeCheckoutConfirmation);
+cancelCheckoutConfirm.addEventListener("click", closeCheckoutConfirmation);
+checkoutConfirmModal.addEventListener("click", (event) => {
+  if (event.target === checkoutConfirmModal) closeCheckoutConfirmation();
+});
+
+confirmCheckoutSale.addEventListener("click", () => {
+  closeCheckoutConfirmation();
+  completeSale();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !checkoutConfirmModal.hidden) {
+    closeCheckoutConfirmation();
+  }
+});
+
+function completeSale() {
   if (saleInProgress) return;
   saleInProgress = true;
   sellButton.disabled = true;
@@ -968,6 +1101,10 @@ sellButton.addEventListener("click", () => {
   const rewardInput = document.getElementById("rewardAmount");
 
   let rewardUsed = Number(rewardInput?.value || 0);
+  if (!Number.isFinite(rewardUsed) || rewardUsed < 0) {
+    rewardUsed = 0;
+    if (rewardInput) rewardInput.value = "0";
+  }
 
   if (!entries.length || !Number.isFinite(paid)) {
     updatePayment();
@@ -982,8 +1119,8 @@ sellButton.addEventListener("click", () => {
    */
   if (suki) {
     if (!suki.active) {
+      updatePayment();
       paymentError.hidden = false;
-
       paymentError.textContent = "This Suki customer is inactive.";
       saleInProgress = false;
       return;
@@ -1003,6 +1140,7 @@ sellButton.addEventListener("click", () => {
   }
 
   const cashRequired = Math.max(total - rewardUsed, 0);
+  const change = Math.max(paid - cashRequired, 0);
 
   if (!Number.isFinite(paid) || paid < cashRequired) {
     updatePayment();
@@ -1032,12 +1170,12 @@ sellButton.addEventListener("click", () => {
        CALCULATE NEW STAMPS
     ========================================= */
 
-  const cashPaid = cashRequired;
+  const cashGiven = paid;
 
   let stampsEarned = 0;
 
   if (suki && suki.active && suki.stamps < MAX_STAMPS) {
-    stampsEarned = Math.floor(cashPaid / STAMP_SPEND_AMOUNT);
+    stampsEarned = Math.floor(cashRequired / STAMP_SPEND_AMOUNT);
 
     stampsEarned = Math.max(
       0,
@@ -1112,7 +1250,11 @@ sellButton.addEventListener("click", () => {
 
         rewardUsed: rewardUsed,
 
-        cashPaid: cashPaid,
+        cashGiven,
+
+        cashRequired: cashRequired,
+
+        change,
 
         stampsEarned: stampsEarned,
 
@@ -1175,6 +1317,8 @@ sellButton.addEventListener("click", () => {
 
       productId: product?.id || item.name,
 
+      category: product?.category || "Other",
+
       unit: window.miniMartDB.normalizeUnit(item.unit || product?.unit),
 
       lineTotal: window.miniMartDB.roundMoney(
@@ -1189,7 +1333,12 @@ sellButton.addEventListener("click", () => {
 
   try {
     window.miniMartDB.saveProducts(inventory);
-    window.miniMartDB.recordSale(saleItems, total);
+    window.miniMartDB.recordSale(saleItems, total, {
+      cashGiven,
+      cashRequired,
+      change,
+      rewardUsed,
+    });
   } catch (error) {
     if (productsSnapshot === null) {
       localStorage.removeItem("miniMartProducts");
@@ -1245,7 +1394,7 @@ sellButton.addEventListener("click", () => {
   filterProducts();
   setBarcodeStatus("Sale complete. Ready to scan the next product.");
   search.focus({ preventScroll: true });
-});
+}
 
 /* =========================================================
    PAYMENT CALCULATION
@@ -1256,13 +1405,18 @@ function updatePayment() {
 
   const paid = Number(amountGiven.value);
 
-  const validPayment = Number.isFinite(paid) && amountGiven.value !== "";
+  const validPayment =
+    amountGiven.value !== "" && Number.isFinite(paid) && paid >= 0;
 
   const suki = getSelectedSuki();
 
   const rewardInput = document.getElementById("rewardAmount");
 
   let rewardUsed = Number(rewardInput?.value || 0);
+  if (!Number.isFinite(rewardUsed) || rewardUsed < 0) {
+    rewardUsed = 0;
+    if (rewardInput) rewardInput.value = "0";
+  }
 
   /*
    * Reward redemption only works
@@ -1289,14 +1443,18 @@ function updatePayment() {
   changeAmount.innerHTML = peso(Math.max(change, 0));
 
   const insufficient = validPayment && paid < cashRequired;
+  const invalidPayment = amountGiven.value !== "" && !validPayment;
 
-  paymentError.hidden = !insufficient;
+  paymentError.hidden = !insufficient && !invalidPayment;
 
   if (insufficient) {
     paymentError.textContent = `Need ${peso(cashRequired)} cash after rewards.`;
+  } else if (invalidPayment) {
+    paymentError.textContent = "Enter a valid cash amount.";
   }
 
-  sellButton.disabled = !cart.size || insufficient || !validPayment;
+  sellButton.disabled =
+    !cart.size || insufficient || invalidPayment || !validPayment;
 }
 
 amountGiven.addEventListener("input", updatePayment);

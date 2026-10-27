@@ -249,6 +249,148 @@ html[data-theme="dark"] .checkout-page .product-icon img {
   min-height: 42px;
 }
 
+.checkout-confirm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(24, 35, 29, 0.55);
+}
+
+.checkout-confirm-modal[hidden] {
+  display: none;
+}
+
+.checkout-confirm-dialog {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--green);
+  border-radius: 4px;
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 18px 50px rgba(24, 35, 29, 0.22);
+}
+
+.checkout-confirm-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.checkout-confirm-heading h2 {
+  margin: 3px 0 0;
+  font: 700 23px "Barlow Condensed", sans-serif;
+}
+
+.checkout-confirm-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 24px;
+}
+
+.checkout-confirm-items {
+  display: grid;
+  gap: 7px;
+  max-height: 170px;
+  overflow-y: auto;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.checkout-confirm-item,
+.checkout-confirm-summary span,
+.checkout-confirm-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.checkout-confirm-item {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.checkout-confirm-item small,
+.checkout-confirm-summary {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.checkout-confirm-summary {
+  display: grid;
+  gap: 7px;
+  padding: 12px 0;
+}
+
+.checkout-confirm-summary strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.checkout-confirm-total {
+  padding: 12px 0;
+  border-top: 1px dashed var(--line);
+  color: var(--muted);
+  font: 700 11px "DM Mono", monospace;
+}
+
+.checkout-confirm-total strong {
+  color: var(--green);
+  font: 700 22px "Barlow Condensed", sans-serif;
+}
+
+.checkout-confirm-error {
+  margin: 0 0 10px;
+  color: var(--red);
+  font: 11px "DM Mono", monospace;
+}
+
+.checkout-confirm-error[hidden] {
+  display: none;
+}
+
+.checkout-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.checkout-confirm-actions button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font: 700 12px "Barlow Condensed", sans-serif;
+}
+
+.checkout-confirm-back {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.checkout-confirm-complete {
+  border-color: var(--green) !important;
+  background: var(--green);
+  color: var(--white);
+}
+
+html[data-theme="dark"] .checkout-page .checkout-confirm-dialog {
+  border-color: var(--line);
+}
+
 html[data-theme="dark"] .checkout-page .category-toggle,
 html[data-theme="dark"] .checkout-page .product-icon {
   background: color-mix(in srgb, var(--accent) 18%, var(--surface-soft));

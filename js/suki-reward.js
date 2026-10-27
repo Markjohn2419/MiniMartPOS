@@ -14,6 +14,7 @@ const MAX_REWARD_BALANCE = 200;
 let selectedSukiId = "";
 let pendingNfcId = "";
 let unlinkSukiId = "";
+let selectedSukiFilter = "all";
 
 const isNfcSupported = window.isNfcSupported;
 
@@ -252,6 +253,27 @@ function getSukis() {
 
 function saveSukis(sukis) {
   localStorage.setItem(SUKI_STORAGE_KEY, JSON.stringify(sukis));
+}
+
+function renderSukiOverview() {
+  const sukis = getSukis();
+  const totalCustomers = document.getElementById("sukiTotalCustomers");
+  const activeCards = document.getElementById("sukiActiveCards");
+  const readyRewards = document.getElementById("sukiReadyRewards");
+  const totalRewards = document.getElementById("sukiTotalRewards");
+
+  if (!totalCustomers || !activeCards || !readyRewards || !totalRewards) {
+    return;
+  }
+
+  totalCustomers.textContent = sukis.length;
+  activeCards.textContent = sukis.filter((suki) => suki.active && suki.nfcId).length;
+  readyRewards.textContent = sukis.filter(
+    (suki) => suki.active && suki.stamps >= MAX_STAMPS && suki.rewardBalance > 0,
+  ).length;
+  totalRewards.textContent = formatPeso(
+    sukis.reduce((sum, suki) => sum + suki.rewardBalance, 0),
+  );
 }
 
 /* =========================================================
@@ -630,17 +652,72 @@ function renderSukiList() {
     return;
   }
 
+  renderSukiOverview();
   const query = sukiSearch?.value.toLowerCase().trim() || "";
 
-  const sukis = getSukis().filter((suki) => {
+  const matchesFilter = (suki) => {
+    if (selectedSukiFilter === "linked") {
+      return Boolean(suki.active && suki.nfcId);
+    }
+
+    if (selectedSukiFilter === "unlinked") {
+      return !suki.nfcId;
+    }
+
+    if (selectedSukiFilter === "ready") {
+      return Boolean(suki.active && suki.stamps >= MAX_STAMPS && suki.rewardBalance > 0);
+    }
+
+    if (selectedSukiFilter === "inactive") {
+      return !suki.active;
+    }
+
+    return true;
+  };
+
+  const getMatchRank = (suki) => {
+    if (!query) {
+      return 0;
+    }
+
     const name = String(suki.name || "").toLowerCase();
-
     const phone = String(suki.phone || "").toLowerCase();
-
     const nfc = String(suki.nfcId || "").toLowerCase();
 
-    return name.includes(query) || phone.includes(query) || nfc.includes(query);
-  });
+    if (name.startsWith(query)) {
+      return 0;
+    }
+
+    if (phone.startsWith(query) || nfc.startsWith(query)) {
+      return 1;
+    }
+
+    return 2;
+  };
+
+  const sukis = getSukis()
+    .filter(matchesFilter)
+    .filter((suki) => {
+      const name = String(suki.name || "").toLowerCase();
+      const phone = String(suki.phone || "").toLowerCase();
+      const nfc = String(suki.nfcId || "").toLowerCase();
+
+      return (
+        !query ||
+        name.includes(query) ||
+        phone.includes(query) ||
+        nfc.includes(query)
+      );
+    })
+    .sort((first, second) => {
+      const rankDifference = getMatchRank(first) - getMatchRank(second);
+
+      if (rankDifference !== 0) {
+        return rankDifference;
+      }
+
+      return String(first.name || "").localeCompare(String(second.name || ""));
+    });
 
   if (!sukis.length) {
     sukiList.innerHTML = `
@@ -654,9 +731,23 @@ function renderSukiList() {
 
   sukiList.innerHTML = sukis
     .map(
-      (suki) => `
+      (suki) => {
+        const stampProgress = Math.min(
+          100,
+          Math.round((suki.stamps / MAX_STAMPS) * 100),
+        );
+        const isReady = suki.active && suki.stamps >= MAX_STAMPS && suki.rewardBalance > 0;
+        const statusLabel = !suki.active
+          ? "Inactive"
+          : isReady
+            ? "Ready to redeem"
+            : suki.nfcId
+              ? "NFC linked"
+              : "No NFC card";
+
+        return `
           <button
-            class="suki-card"
+            class="suki-card ${isReady ? "is-ready" : ""} ${suki.active ? "" : "is-inactive"}"
             type="button"
             data-suki-id="${escapeHtml(suki.id)}"
           >
@@ -670,6 +761,14 @@ function renderSukiList() {
               <small class="suki-card-phone">
                 ${suki.phone ? escapeHtml(suki.phone) : "No phone number"}
               </small>
+
+              <span class="suki-card-status ${isReady ? "is-ready" : ""} ${suki.active ? "" : "is-inactive"}">
+                ${statusLabel}
+              </span>
+
+              <div class="suki-card-progress" aria-label="${suki.stamps} of ${MAX_STAMPS} stamps">
+                <span style="width:${stampProgress}%"></span>
+              </div>
 
             </div>
 
@@ -698,7 +797,8 @@ function renderSukiList() {
             </div>
 
           </button>
-        `,
+        `;
+      },
     )
     .join("");
 
@@ -1424,6 +1524,20 @@ scanTab?.addEventListener("click", showScanTab);
 allSukisTab?.addEventListener("click", showAllSukisTab);
 
 sukiSearch?.addEventListener("input", renderSukiList);
+
+document.querySelectorAll("[data-suki-filter]").forEach((filterButton) => {
+  filterButton.addEventListener("click", () => {
+    selectedSukiFilter = filterButton.dataset.sukiFilter || "all";
+
+    document.querySelectorAll("[data-suki-filter]").forEach((button) => {
+      const isSelected = button === filterButton;
+      button.classList.toggle("is-active", isSelected);
+      button.setAttribute("aria-pressed", String(isSelected));
+    });
+
+    renderSukiList();
+  });
+});
 
 closeDetail?.addEventListener("click", () => {
   closeModal(detailModal);

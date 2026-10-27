@@ -71,8 +71,17 @@
           </div>
         </div>
 
+        <div class="settings-tabs" role="tablist" aria-label="Settings panels">
+          <button class="settings-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="storeInfoSection" data-settings-panel="storeInfoSection">Store</button>
+          <button class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="inventoryRulesSection" data-settings-panel="inventoryRulesSection">Inventory</button>
+          <button class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="categorySection" data-settings-panel="categorySection">Categories</button>
+          <button class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="sukiSettingsSection" data-settings-panel="sukiSettingsSection">Suki Rewards</button>
+          <button class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="backupSection" data-settings-panel="backupSection">Data &amp; Backup</button>
+          <button class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="appearanceSection" data-settings-panel="appearanceSection">Appearance</button>
+        </div>
+
         <section class="settings-cards" aria-label="Settings sections">
-          <article class="settings-card">
+          <article class="settings-card is-active-panel" id="storeInfoSection" role="tabpanel" tabindex="-1">
             <form id="storeInfoForm" novalidate>
               <h3>Store Info</h3>
               <div class="settings-fields">
@@ -90,6 +99,11 @@
                   Contact number
                   <input id="contactNumber" name="contactNumber" type="tel" maxlength="30" />
                   <span class="field-error" id="contactNumberError"></span>
+                </label>
+                <label>
+                  Register name
+                  <input id="registerName" name="registerName" type="text" maxlength="40" />
+                  <span class="field-error" id="registerNameError"></span>
                 </label>
                 <label>
                   Receipt footer message
@@ -131,13 +145,26 @@
                 <img id="logoPreview" class="logo-preview" alt="Store logo preview" hidden />
                 <span class="field-error" id="storeLogoError"></span>
               </div>
+              <div class="receipt-preview" aria-label="Receipt preview">
+                <strong>Receipt preview</strong>
+                <div class="receipt-preview-content">
+                  <img id="receiptPreviewLogo" alt="" hidden />
+                  <div>
+                    <b id="receiptPreviewStore">Mini Mart</b>
+                    <small id="receiptPreviewContact">—</small>
+                  </div>
+                </div>
+                <small id="receiptPreviewFooter">Salamat, balik po!</small>
+              </div>
+              <p class="settings-help" id="datePreview">Date preview: —</p>
               <div class="settings-actions">
                 <button class="settings-button-primary" type="submit">SAVE STORE INFO</button>
+                <button class="settings-button-ghost" id="resetStoreInfo" type="button">RESET SECTION</button>
                 <span class="settings-status" id="settingsStatus" role="status" aria-live="polite"></span>
               </div>
             </form>
           </article>
-          <article class="settings-card">
+          <article class="settings-card" id="inventoryRulesSection" role="tabpanel" tabindex="-1" hidden>
             <form id="inventoryRulesForm" novalidate>
               <h3>Inventory Rules</h3>
               <div class="settings-fields">
@@ -164,33 +191,39 @@
               </p>
               <div class="settings-actions">
                 <button class="settings-button-primary" type="submit">SAVE INVENTORY RULES</button>
+                <button class="settings-button-ghost" id="resetInventoryRules" type="button">RESET SECTION</button>
                 <span class="settings-status" id="inventoryRulesStatus" role="status" aria-live="polite"></span>
               </div>
             </form>
           </article>
-          <article class="settings-card category-settings-card">
+          <article class="settings-card category-settings-card" id="categorySection" role="tabpanel" tabindex="-1" hidden>
             <div class="category-summary">
               <div class="category-summary-header">
                 <div>
                   <h3>Categories</h3>
                   <small id="categoryManagementSummary">0 categories</small>
                 </div>
-                <button id="openCategoryManagement" class="settings-button-secondary category-manage-button" type="button">
+                <button id="openCategoryManagement" class="settings-button-secondary category-manage-button" type="button" aria-label="Manage categories">
                   <svg aria-hidden="true" viewBox="0 0 24 24">
                     <path d="M4 7h16M4 12h16M4 17h16" />
                     <circle cx="9" cy="7" r="2" />
                     <circle cx="15" cy="12" r="2" />
                     <circle cx="11" cy="17" r="2" />
                   </svg>
-                  MANAGE CATEGORIES
+                  MANAGE
                 </button>
               </div>
               <div id="categorySummaryChips" class="category-summary-chips"></div>
+              <p class="settings-help">Category order is used in Checkout, Inventory, and Reports. Renaming keeps products and historical report categories aligned; deleting a category first moves its products.</p>
             </div>
           </article>
-          <article class="settings-card">
+          <article class="settings-card" id="sukiSettingsSection" role="tabpanel" tabindex="-1" hidden>
             <form id="sukiSettingsForm" novalidate>
               <h3>Suki Rewards</h3>
+              <div class="settings-feature-note">
+                <strong>Active checkout rules</strong>
+                <span>₱50 spent earns 1 stamp. 40 stamps unlock a ₱50 reward.</span>
+              </div>
               <div class="settings-checkbox suki-enabled-row">
                 <input id="sukiEnabled" name="sukiEnabled" type="checkbox" />
                 <label for="sukiEnabled">Enable Suki Rewards</label>
@@ -227,14 +260,15 @@
                   <span class="field-error" id="sukiPointsExpiryDaysError"></span>
                 </label>
               </div>
-              <p class="settings-help">These rules are saved for future points earning and redemption. They do not change checkout yet.</p>
+              <p class="settings-help">The active program uses stamps. The legacy points values are retained for old data compatibility and do not change Checkout.</p>
               <div class="settings-actions">
                 <button class="settings-button-primary" type="submit">SAVE SUKI SETTINGS</button>
+                <button class="settings-button-ghost" id="resetSukiSettings" type="button">RESET SECTION</button>
                 <span class="settings-status" id="sukiSettingsStatus" role="status" aria-live="polite"></span>
               </div>
             </form>
           </article>
-          <article class="settings-card">
+          <article class="settings-card" id="backupSection" role="tabpanel" tabindex="-1" hidden>
             <div class="data-backup-card">
               <h3>Data &amp; Backup</h3>
               <p class="settings-help">Export reports or save a complete copy of this register before moving devices.</p>
@@ -286,8 +320,16 @@
                 <label class="settings-button-secondary backup-upload-button" for="restoreBackup">CHOOSE BACKUP FILE</label>
                 <input id="restoreBackup" type="file" accept="application/json,.json" />
               </div>
-              <p class="settings-help">Restoring replaces products, sales, categories, customers, and settings after confirmation.</p>
+              <p class="settings-help">Restoring replaces products, sales, categories, customers, inventory history, and settings after confirmation.</p>
+              <div class="backup-summary" id="backupSummary" role="status" aria-live="polite"></div>
               <div class="settings-status" id="backupStatus" role="status" aria-live="polite"></div>
+              <div class="settings-subsection-heading inventory-history-export">
+                <div>
+                  <h4>Inventory history</h4>
+                  <p class="settings-help">Download stock adjustments for audit or review.</p>
+                </div>
+                <button class="settings-button-secondary" id="exportInventoryHistory" type="button">EXPORT HISTORY</button>
+              </div>
               <div class="product-import-panel">
                 <div class="settings-subsection-heading">
                   <div>
@@ -317,7 +359,7 @@
               </div>
             </div>
           </article>
-          <article class="settings-card">
+          <article class="settings-card" id="appearanceSection" role="tabpanel" tabindex="-1" hidden>
             <div id="appearanceForm">
               <h3>Appearance &amp; Device</h3>
               <div class="theme-toggle-row">
@@ -357,6 +399,7 @@
                   </p>
                   <p class="device-status-details" id="nfcStatusDetails"></p>
                   <p class="device-status-confirmation" id="nfcStatusConfirmation" role="status"></p>
+                  <p class="settings-help nfc-troubleshooting">Web NFC normally requires Chrome on Android, an NFC-capable phone, and HTTPS (or localhost). Turn on NFC in the phone settings and allow this site if scanning is blocked.</p>
                 </div>
               </section>
             </div>

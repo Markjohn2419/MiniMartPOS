@@ -7,6 +7,21 @@ const settings = settingsApi ? settingsApi.get() : {};
 
 settingsApi?.applyTheme(settings);
 
+function applyStoreLogo(nextSettings) {
+  const logoIsValid =
+    nextSettings?.logoDataUrl &&
+    settingsApi?.isValidLogoDataUrl(nextSettings.logoDataUrl);
+  document.querySelectorAll(".brand-mark img").forEach((image) => {
+    if (logoIsValid) {
+      image.src = nextSettings.logoDataUrl;
+      image.classList.add("custom-store-logo");
+    } else {
+      image.src = "Icons/grocery-store.png";
+      image.classList.remove("custom-store-logo");
+    }
+  });
+}
+
 document.querySelectorAll(".suki-link").forEach((link) => {
   link.hidden = settings.sukiEnabled === false;
 });
@@ -27,11 +42,17 @@ document.querySelectorAll(".brand h1").forEach((element) => {
 document.querySelectorAll(".brand .eyebrow").forEach((element) => {
   element.textContent = settings.registerName || "REGISTER 01";
 });
-if (settings.logoDataUrl && settingsApi?.isValidLogoDataUrl(settings.logoDataUrl)) {
-  document.querySelectorAll(".brand-mark img").forEach((image) => {
-    image.src = settings.logoDataUrl;
-  });
-}
+applyStoreLogo(settings);
+window.addEventListener("miniMartSettingsChanged", (event) => {
+  const nextSettings = event.detail || settingsApi?.get();
+  settingsApi?.applyTheme(nextSettings);
+  applyStoreLogo(nextSettings);
+});
+window.addEventListener("storage", (event) => {
+  if (event.key === settingsApi?.SETTINGS_KEY) {
+    applyStoreLogo(settingsApi.get());
+  }
+});
 
 if (mobileMenuButton && mainNavigation) {
   mobileMenuButton.addEventListener("click", () => {

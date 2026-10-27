@@ -71,6 +71,13 @@
               ＋ CREATE PRODUCT
             </button>
           </div>
+        <div class="inventory-summary" aria-label="Inventory summary">
+          <span><strong id="inventoryTotalProducts">0</strong> Products</span>
+          <span><strong id="inventoryTotalStock">0</strong> Total stock</span>
+          <span class="is-low"><strong id="inventoryLowStock">0</strong> Low stock</span>
+          <span class="is-empty"><strong id="inventoryOutOfStock">0</strong> Out of stock</span>
+          <span><strong id="inventoryValue">₱0.00</strong> Inventory value</span>
+        </div>
         </div>
         <div class="search-wrap">
           <span aria-hidden="true">⌕</span>
@@ -97,7 +104,7 @@
           <table class="inventory-table">
             <thead>
               <tr>
-                <th><label class="select-products-label"><input id="selectVisibleProducts" type="checkbox" aria-label="Select all visible products" /> Name</label></th>
+                <th class="select-column"><label class="select-products-label"><input id="selectVisibleProducts" type="checkbox" aria-label="Select all visible products" /> Name</label></th>
                 <th>Category</th>
                 <th>Cost</th>
                 <th>Price</th>
@@ -109,7 +116,40 @@
           </table>
           <div class="no-products" id="noProducts">No products found.</div>
         </div>
+        <div class="inventory-bulk-bar" id="inventoryBulkBar" hidden>
+          <strong><span id="selectedProductCount">0</span> selected</strong>
+          <button id="adjustSelectedStock" type="button">ADJUST STOCK</button>
+          <button id="clearSelectedProducts" type="button">CLEAR</button>
+        </div>
       </main>
+    </div>
+    <div class="modal-backdrop" id="stockAdjustmentModal" hidden>
+      <section class="product-modal stock-adjustment-modal" role="dialog" aria-modal="true" aria-labelledby="stockAdjustmentTitle">
+        <div class="modal-header">
+          <div><div class="eyebrow">INVENTORY</div><h2 id="stockAdjustmentTitle">Adjust stock</h2></div>
+          <button class="modal-close" id="closeStockAdjustment" type="button" aria-label="Close stock adjustment">×</button>
+        </div>
+        <p class="modal-help" id="stockAdjustmentProducts"></p>
+        <div class="stock-adjustment-fields">
+          <label>Action<select id="stockAdjustmentAction"><option value="add">Add stock</option><option value="remove">Remove stock</option></select></label>
+          <label>Quantity<input id="stockAdjustmentQuantity" type="number" min="0.001" step="1" inputmode="decimal" placeholder="0" /></label>
+          <label>Reason<select id="stockAdjustmentReason"><option>Delivery</option><option>Damaged</option><option>Expired</option><option>Manual count correction</option><option>Other</option></select></label>
+        </div>
+        <small class="field-error" id="stockAdjustmentError"></small>
+        <div class="modal-actions">
+          <button class="modal-cancel" id="cancelStockAdjustment" type="button">CANCEL</button>
+          <button class="modal-save" id="saveStockAdjustment" type="button">SAVE ADJUSTMENT</button>
+        </div>
+      </section>
+    </div>
+    <div class="modal-backdrop" id="stockHistoryModal" hidden>
+      <section class="product-modal stock-history-modal" role="dialog" aria-modal="true" aria-labelledby="stockHistoryTitle">
+        <div class="modal-header">
+          <div><div class="eyebrow">INVENTORY</div><h2 id="stockHistoryTitle">Stock history</h2></div>
+          <button class="modal-close" id="closeStockHistory" type="button" aria-label="Close stock history">×</button>
+        </div>
+        <div class="stock-history-list" id="stockHistoryList"></div>
+      </section>
     </div>
     <div
       class="modal-backdrop delete-modal-backdrop"
@@ -247,14 +287,18 @@
                 <small class="field-error" id="productPriceError"></small>
               </label>
               <label
-                ><span id="productStockLabel">Stock (pcs)</span><input
-                  id="productStock"
-                  type="number"
-                  min="0"
-                  step="1"
-                  required
-                />
-                <small class="input-suffix" id="stockSuffix">pc</small>
+                >
+                <span class="stock-input-wrap">
+                  <span id="productStockLabel">Stock (pcs)</span>
+                  <input
+                    id="productStock"
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                  />
+                  <small class="input-suffix" id="stockSuffix">pc</small>
+                </span>
                 <small class="field-error" id="productStockError"></small>
               </label>
               <label

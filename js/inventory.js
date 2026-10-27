@@ -47,6 +47,19 @@ const categoryUnitField = document.getElementById("categoryUnitField");
 const categoryIconPicker = document.getElementById("categoryIconPicker");
 const deleteProductModal = document.getElementById("deleteProductModal");
 const deleteProductCopy = document.getElementById("deleteProductCopy");
+const stockAdjustmentModal = document.getElementById("stockAdjustmentModal");
+const stockAdjustmentProducts = document.getElementById("stockAdjustmentProducts");
+const stockAdjustmentAction = document.getElementById("stockAdjustmentAction");
+const stockAdjustmentQuantity = document.getElementById("stockAdjustmentQuantity");
+const stockAdjustmentReason = document.getElementById("stockAdjustmentReason");
+const stockAdjustmentError = document.getElementById("stockAdjustmentError");
+const stockHistoryModal = document.getElementById("stockHistoryModal");
+const stockHistoryList = document.getElementById("stockHistoryList");
+const selectedProductCount = document.getElementById("selectedProductCount");
+const inventoryBulkBar = document.getElementById("inventoryBulkBar");
+const selectAllProducts = document.getElementById("selectVisibleProducts");
+const selectedProductNames = new Set();
+let adjustmentProductNames = [];
 let pendingDeleteName = null;
 let editingName = null;
 let modalMode = "create-category";
@@ -139,8 +152,48 @@ function categoryAccent(category) {
   );
 }
 
+function safeAccent(value) {
+  return /^var\(--[a-z0-9-]+\)$/.test(String(value || ""))
+    ? value
+    : "var(--blue)";
+}
+
 function categoryIconPath(category) {
-  return window.miniMartDB.categoryIcon(category);
+  const path = window.miniMartDB.categoryIcon(category);
+  return /^Icons\/[A-Za-z0-9._-]+\.(?:png|svg)$/.test(path)
+    ? path
+    : "Icons/bread.png";
+}
+
+function inventorySummary(products) {
+  const threshold = Number(window.miniMartSettings.get().lowStockThreshold) || 0;
+  document.getElementById("inventoryTotalProducts").textContent = products.length;
+  document.getElementById("inventoryTotalStock").textContent = products.reduce(
+    (sum, product) => sum + Number(product.stock || 0),
+    0,
+  );
+  document.getElementById("inventoryLowStock").textContent = products.filter(
+    (product) => Number(product.stock) > 0 && Number(product.stock) <= threshold,
+  ).length;
+  document.getElementById("inventoryOutOfStock").textContent = products.filter(
+    (product) => Number(product.stock) <= 0,
+  ).length;
+  document.getElementById("inventoryValue").textContent =
+    window.miniMartSettings.formatCurrency(
+      products.reduce(
+        (sum, product) => sum + Number(product.costPrice || 0) * Number(product.stock || 0),
+        0,
+      ),
+    );
+}
+
+function canonicalCategory(value, categories = window.miniMartDB.categories()) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return (
+    categories.find(
+      (category) => String(category).trim().toLowerCase() === normalized,
+    ) || String(value || "").trim()
+  );
 }
 
 function updateCategoryOptions() {
@@ -153,16 +206,16 @@ function updateCategoryOptions() {
 function updateIconPicker() {
   document
     .querySelectorAll(".icon-option")
-    .forEach((button) =>
-      button.classList.toggle(
-        "selected",
-        button.dataset.icon === selectedCategoryIcon,
-      ),
-    );
+    .forEach((button) => {
+      const selected = button.dataset.icon === selectedCategoryIcon;
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
 }
 
 function renderRows() {
   const products = window.miniMartDB.products();
+  inventorySummary(products);
   const categories = [
     ...window.miniMartDB.categories(),
     ...new Set(products.map((product) => product.category)),
@@ -174,7 +227,7 @@ function renderRows() {
         .sort((first, second) => first.name.localeCompare(second.name));
       const safeCategory = escapeHtml(category);
       const categoryUnit = window.miniMartDB.categoryDefaultUnit(category);
-      const header = `<tr class="category-group" style="--accent:${categoryAccent(category)}" data-category="${safeCategory}" data-open="false" tabindex="0" aria-expanded="false"><td colspan="6"><span><img src="${categoryIconPath(category)}" alt="" /></span><strong>${safeCategory}</strong><small>${categoryProducts.length} products</small>${categoryUnit !== "piece" ? `<em class="unit-tag">${unitLabel(categoryUnit)}</em>` : ""}<button type="button" class="category-add-product" data-add-category="${safeCategory}" aria-label="Add product to ${safeCategory}">＋ Add product</button><b>＋</b></td></tr>`;
+      const header = `<tr class="category-group" style="--accent:${safeAccent(categoryAccent(category))}" data-category="${safeCategory}" data-open="false" tabindex="0" aria-expanded="false"><td colspan="6"><span><img src="${categoryIconPath(category)}" alt="" /></span><strong>${safeCategory}</strong><small>${categoryProducts.length} products</small>${categoryUnit !== "piece" ? `<em class="unit-tag">${unitLabel(categoryUnit)}</em>` : ""}<button type="button" class="category-add-product" data-add-category="${safeCategory}" aria-label="Add product to ${safeCategory}">＋ Add product</button><b>＋</b></td></tr>`;
       const productRows = categoryProducts
         .map(
           (product) => {
@@ -184,7 +237,9 @@ function renderRows() {
               unit === "piece"
                 ? String(window.miniMartDB.roundQuantity(product.stock, unit))
                 : window.miniMartDB.formatQuantity(product.stock, unit);
-            return `<tr data-product="${escapeHtml(product.name)}" data-category="${escapeHtml(product.category)}" data-barcode="${escapeHtml(product.barcode || "")}"><td><label class="select-products-label"><input class="product-select" type="checkbox" data-select-product="${escapeHtml(product.name)}" aria-label="Select ${escapeHtml(product.name)}" /><span>${escapeHtml(product.name)}</span></label></td><td><span class="category-label" style="--accent:${categoryAccent(product.category)}"><img src="${categoryIconPath(product.category)}" alt="" />${escapeHtml(product.category)}</span></td><td class="inventory-price">${window.miniMartDB.isKnownCost(product.costPrice) ? window.miniMartSettings.formatCurrency(product.costPrice) : "—"}</td><td class="inventory-price">${price}${unit === "piece" ? "" : ` / ${unitLabel(unit)}`}</td><td class="inventory-stock">${stock}</td><td class="row-actions"><button class="edit-action" type="button">♢ Edit</button><button class="delete-action" type="button">♧ Delete</button></td></tr>`;
+            const threshold = Number(window.miniMartSettings.get().lowStockThreshold) || 0;
+            const stockClass = Number(product.stock) <= 0 ? "is-out" : Number(product.stock) <= threshold ? "is-low" : "";
+            return `<tr data-product="${escapeHtml(product.name)}" data-category="${escapeHtml(product.category)}" data-barcode="${escapeHtml(product.barcode || "")}" tabindex="0"><td><label class="select-products-label"><input class="product-select" type="checkbox" data-select-product="${escapeHtml(product.name)}" aria-label="Select ${escapeHtml(product.name)}" ${selectedProductNames.has(product.name) ? "checked" : ""} /></label><span>${escapeHtml(product.name)}</span></td><td><span class="category-label" style="--accent:${safeAccent(categoryAccent(product.category))}"><img src="${categoryIconPath(product.category)}" alt="" />${escapeHtml(product.category)}</span></td><td class="inventory-price">${window.miniMartDB.isKnownCost(product.costPrice) ? window.miniMartSettings.formatCurrency(product.costPrice) : "—"}</td><td class="inventory-price">${price}${unit === "piece" ? "" : ` / ${unitLabel(unit)}`}</td><td class="inventory-stock ${stockClass}">${stock}${stockClass === "is-low" ? " <small>LOW</small>" : stockClass === "is-out" ? " <small>OUT</small>" : ""}</td><td class="row-actions"><button class="adjust-action" type="button">＋ Stock</button><button class="history-action" type="button">▤ History</button><button class="edit-action" type="button">♢ Edit</button><button class="delete-action" type="button">♧ Delete</button></td></tr>`;
           },
         )
         .join("");
@@ -202,8 +257,21 @@ function updateVisibleRows() {
     row.dataset.product.toLowerCase().startsWith(query) ||
     (rawQuery !== "" && row.dataset.barcode === rawQuery);
   let visible = 0;
+  const groups = [...tbody.querySelectorAll(".category-group")];
+  groups.forEach((group, index) => {
+    const categoryRows = rows
+      .filter((row) => row.dataset.category === group.dataset.category)
+      .sort((first, second) => {
+        const firstName = first.dataset.product.toLowerCase();
+        const secondName = second.dataset.product.toLowerCase();
+        const firstRank = query && firstName.startsWith(query) ? 0 : 1;
+        const secondRank = query && secondName.startsWith(query) ? 0 : 1;
+        return firstRank - secondRank || firstName.localeCompare(secondName);
+      });
+    categoryRows.forEach((row) => tbody.insertBefore(row, groups[index + 1] || null));
+  });
   rows.forEach((row) => {
-    const match = matches(row);
+    const match = matches(row) || row.dataset.product.toLowerCase().includes(query);
     const group = tbody.querySelector(
       `.category-group[data-category="${CSS.escape(row.dataset.category)}"]`,
     );
@@ -225,6 +293,7 @@ function updateVisibleRows() {
   count.textContent = query ? visible : rows.length;
   noProducts.style.display = visible === 0 ? "block" : "none";
   document.dispatchEvent(new CustomEvent("miniMartInventoryViewChanged"));
+  updateSelectionUi();
 }
 
 function setLookupStatus(message, isError = false) {
@@ -306,6 +375,19 @@ function findLookupProduct() {
   if (!names.length && /^[^\s]+$/.test(query) && /\d/.test(query)) return useNewBarcode(query);
   renderLookupResults();
   productLookupResults.querySelector("button")?.focus();
+}
+
+function updateSelectionUi() {
+  selectedProductCount.textContent = selectedProductNames.size;
+  inventoryBulkBar.hidden = selectedProductNames.size === 0;
+  const visibleNames = rows
+    .filter((row) => row.style.display !== "none")
+    .map((row) => row.dataset.product);
+  selectAllProducts.checked =
+    visibleNames.length > 0 && visibleNames.every((name) => selectedProductNames.has(name));
+  selectAllProducts.indeterminate =
+    visibleNames.some((name) => selectedProductNames.has(name)) &&
+    !selectAllProducts.checked;
 }
 
 function openModal(product) {
@@ -478,6 +560,20 @@ tbody.addEventListener("click", (event) => {
   if (!row) return;
   const products = window.miniMartDB.products();
   const product = products.find((entry) => entry.name === row.dataset.product);
+  if (event.target.closest(".product-select")) {
+    if (event.target.checked) selectedProductNames.add(row.dataset.product);
+    else selectedProductNames.delete(row.dataset.product);
+    updateSelectionUi();
+    return;
+  }
+  if (event.target.closest(".adjust-action") && product) {
+    openStockAdjustment([product.name]);
+    return;
+  }
+  if (event.target.closest(".history-action") && product) {
+    openStockHistory(product.name);
+    return;
+  }
   if (event.target.closest(".edit-action") && product) openModal(product);
   if (event.target.closest(".delete-action")) {
     event.preventDefault();
@@ -487,6 +583,107 @@ tbody.addEventListener("click", (event) => {
     deleteProductModal.hidden = false;
     document.getElementById("confirmDeleteProduct").focus();
   }
+});
+
+function openStockAdjustment(names) {
+  adjustmentProductNames = names;
+  stockAdjustmentProducts.textContent =
+    names.length === 1
+      ? `Adjusting stock for ${names[0]}.`
+      : `Adjusting stock for ${names.length} selected products.`;
+  stockAdjustmentQuantity.value = "";
+  stockAdjustmentError.textContent = "";
+  stockAdjustmentModal.hidden = false;
+  stockAdjustmentQuantity.focus();
+}
+
+function closeStockAdjustment() {
+  stockAdjustmentModal.hidden = true;
+  adjustmentProductNames = [];
+}
+
+function openStockHistory(name) {
+  let history = [];
+  try {
+    history = JSON.parse(localStorage.getItem("miniMartInventoryAdjustments") || "[]");
+  } catch (error) {
+    stockHistoryList.textContent = "Stock history could not be read.";
+    stockHistoryModal.hidden = false;
+    return;
+  }
+  const entries = history.filter((entry) => entry.product === name).slice(-20).reverse();
+  document.getElementById("stockHistoryTitle").textContent = `${name} history`;
+  stockHistoryList.innerHTML = entries.length
+    ? entries.map((entry) => `<div class="stock-history-row"><span><strong>${entry.adjustment > 0 ? "+" : ""}${entry.adjustment}</strong> ${escapeHtml(entry.reason)}</span><small>${entry.previousStock} → ${entry.stockAfter} · ${new Date(entry.date).toLocaleString()}</small></div>`).join("")
+    : '<p class="modal-help">No stock adjustments recorded yet.</p>';
+  stockHistoryModal.hidden = false;
+}
+
+function closeStockHistory() {
+  stockHistoryModal.hidden = true;
+}
+
+document.getElementById("saveStockAdjustment").addEventListener("click", () => {
+  const quantity = Number(stockAdjustmentQuantity.value);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    stockAdjustmentError.textContent = "Enter a quantity greater than zero.";
+    return;
+  }
+  const products = window.miniMartDB.products();
+  const timestamp = new Date().toISOString();
+  const history = JSON.parse(localStorage.getItem("miniMartInventoryAdjustments") || "[]");
+  for (const name of adjustmentProductNames) {
+    const product = products.find((entry) => entry.name === name);
+    if (!product) continue;
+    const oldStock = Number(product.stock) || 0;
+    const unit = window.miniMartDB.normalizeUnit(product.unit);
+    const nextStock = stockAdjustmentAction.value === "add"
+      ? oldStock + quantity
+      : oldStock - quantity;
+    if (nextStock < 0) {
+      stockAdjustmentError.textContent = `${product.name} cannot go below zero stock.`;
+      return;
+    }
+    product.stock = window.miniMartDB.roundQuantity(nextStock, unit);
+    history.push({
+      product: product.name,
+      previousStock: oldStock,
+      adjustment: stockAdjustmentAction.value === "add" ? quantity : -quantity,
+      stockAfter: product.stock,
+      reason: stockAdjustmentReason.value,
+      date: timestamp,
+    });
+  }
+  window.miniMartDB.saveProducts(products);
+  localStorage.setItem("miniMartInventoryAdjustments", JSON.stringify(history.slice(-1000)));
+  closeStockAdjustment();
+  renderRows();
+});
+
+document.getElementById("closeStockAdjustment").addEventListener("click", closeStockAdjustment);
+document.getElementById("cancelStockAdjustment").addEventListener("click", closeStockAdjustment);
+stockAdjustmentModal.addEventListener("click", (event) => {
+  if (event.target === stockAdjustmentModal) closeStockAdjustment();
+});
+document.getElementById("closeStockHistory").addEventListener("click", closeStockHistory);
+stockHistoryModal.addEventListener("click", (event) => {
+  if (event.target === stockHistoryModal) closeStockHistory();
+});
+selectAllProducts.addEventListener("change", () => {
+  rows
+    .filter((row) => row.style.display !== "none")
+    .forEach((row) => {
+      if (selectAllProducts.checked) selectedProductNames.add(row.dataset.product);
+      else selectedProductNames.delete(row.dataset.product);
+    });
+  renderRows();
+});
+document.getElementById("adjustSelectedStock").addEventListener("click", () => {
+  if (selectedProductNames.size) openStockAdjustment([...selectedProductNames]);
+});
+document.getElementById("clearSelectedProducts").addEventListener("click", () => {
+  selectedProductNames.clear();
+  renderRows();
 });
 
 function closeDeleteProductModal() {
@@ -520,13 +717,23 @@ tbody.addEventListener("keydown", (event) => {
   if (group && event.target === group && (event.key === "Enter" || event.key === " ")) {
     event.preventDefault();
     group.click();
+    return;
+  }
+
+  const row = event.target.closest("tr[data-product]");
+  if (row && event.key === "Enter") {
+    event.preventDefault();
+    const product = window.miniMartDB
+      .products()
+      .find((entry) => entry.name === row.dataset.product);
+    if (product) openModal(product);
   }
 });
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const products = window.miniMartDB.products();
-  const category = categoryName.value.trim();
+  let category = canonicalCategory(categoryName.value);
   const name = productName.value.trim();
   const barcode = productBarcode.value.trim();
   if (!validateForm()) return;
@@ -549,6 +756,37 @@ form.addEventListener("submit", (event) => {
     lossWarning.hidden = false;
     lossConfirmField.hidden = false;
     lossConfirm.focus();
+    return;
+  }
+
+  const duplicateName = products.some(
+    (entry) =>
+      entry.name.toLowerCase() === name.toLowerCase() &&
+      entry.name !== editingName,
+  );
+  if (duplicateName) {
+    setFieldError(
+      productName,
+      productNameError,
+      "A product with this name already exists.",
+    );
+    return;
+  }
+  const similarProduct = products.find((entry) => {
+    if (entry.name === editingName) return false;
+    const existing = entry.name.toLowerCase();
+    const candidate = name.toLowerCase();
+    return (
+      existing.includes(candidate) ||
+      candidate.includes(existing) ||
+      (existing.split(/\s+/)[0] === candidate.split(/\s+/)[0] &&
+        existing.split(/\s+/).length > 1 &&
+        candidate.split(/\s+/).length > 1)
+    );
+  });
+  if (similarProduct && !window.confirm(
+    `"${name}" is similar to "${similarProduct.name}". Add it anyway?`,
+  )) {
     return;
   }
 
@@ -580,7 +818,26 @@ form.addEventListener("submit", (event) => {
     window.miniMartDB.saveCategoryDefaultUnit(category, categoryDefaultUnit.value);
   } else if (modalMode === "edit-product") {
     const index = products.findIndex((entry) => entry.name === editingName);
-    if (index !== -1)
+    if (index !== -1) {
+      const existingCategory = canonicalCategory(category);
+      const categoryExists = window.miniMartDB
+        .categories()
+        .some(
+          (entry) =>
+            entry.toLowerCase() === existingCategory.toLowerCase(),
+        );
+      category = existingCategory;
+      if (!categoryExists) {
+        window.miniMartDB.saveCategories([
+          ...window.miniMartDB.categories(),
+          category,
+        ]);
+        window.miniMartDB.saveCategoryDefaultUnit(
+          category,
+          categoryDefaultUnit.value,
+        );
+        window.miniMartDB.saveCategoryIcon(category, selectedCategoryIcon);
+      }
       products[index] = {
         ...products[index],
         name,
@@ -591,11 +848,8 @@ form.addEventListener("submit", (event) => {
         stock: normalizedStock,
         unit,
       };
+    }
   } else {
-    if (
-      products.some((entry) => entry.name.toLowerCase() === name.toLowerCase())
-    )
-      return;
     const categoryExists = window.miniMartDB
       .categories()
       .some((entry) => entry.toLowerCase() === category.toLowerCase());
@@ -657,6 +911,7 @@ document.querySelectorAll(".icon-option").forEach((button) =>
   button.addEventListener("click", () => {
     selectedCategoryIcon = button.dataset.icon;
     updateIconPicker();
+    categoryHelp.textContent = `Selected ${button.getAttribute("aria-label") || "category"} for this category.`;
   }),
 );
 document
@@ -672,4 +927,29 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !modal.hidden) closeModal();
   if (event.key === "Escape" && !deleteProductModal.hidden)
     closeDeleteProductModal();
+});
+
+window.addEventListener("miniMartDatabaseChanged", (event) => {
+  const key = event.detail?.key;
+  if (
+    key === "miniMartProducts" ||
+    key === "miniMartCategories" ||
+    key === "miniMartCategoryIcons" ||
+    key === "miniMartCategoryUnits"
+  ) {
+    renderRows();
+    updateCategoryOptions();
+  }
+});
+
+window.addEventListener("storage", (event) => {
+  if (
+    event.key === "miniMartProducts" ||
+    event.key === "miniMartCategories" ||
+    event.key === "miniMartCategoryIcons" ||
+    event.key === "miniMartCategoryUnits"
+  ) {
+    renderRows();
+    updateCategoryOptions();
+  }
 });

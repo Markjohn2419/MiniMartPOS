@@ -108,6 +108,106 @@
 .reports-page .metric-card small.trend-flat {
   color: var(--muted);
 }
+.reports-page .category-overview-section {
+  margin-bottom: 16px;
+}
+.reports-page .section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+.reports-page .section-heading h2 {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font:
+    700 18px "Barlow Condensed",
+    sans-serif;
+  letter-spacing: 0.04em;
+}
+.reports-page .section-heading .panel-note {
+  margin-bottom: 2px;
+}
+.reports-page .category-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+.reports-page .category-overview-card {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--category-color, var(--blue));
+  border-radius: 4px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  cursor: pointer;
+}
+.reports-page .category-overview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 22px rgba(25, 35, 29, 0.1);
+}
+.reports-page .category-overview-card:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
+.reports-page .category-overview-card:active {
+  transform: translateY(0);
+}
+.reports-page .category-overview-card h3 {
+  overflow: hidden;
+  margin: 0 0 9px;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font:
+    700 15px "Barlow Condensed",
+    sans-serif;
+}
+.reports-page .category-overview-card strong {
+  display: block;
+  color: var(--ink);
+  font:
+    700 21px "Barlow Condensed",
+    sans-serif;
+}
+.reports-page .category-overview-card > small {
+  display: block;
+  margin-top: 1px;
+  color: var(--muted);
+  font:
+    9px "DM Mono",
+    monospace;
+  text-transform: uppercase;
+}
+.reports-page .category-overview-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 12px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+.reports-page .category-overview-stats span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--muted);
+  font:
+    9px "DM Mono",
+    monospace;
+}
+.reports-page .category-overview-stats b {
+  color: var(--ink);
+  font-size: 11px;
+}
+.reports-page .category-overview-stats .is-low b {
+  color: var(--red);
+}
 .reports-page .data-icon {
   position: absolute;
   top: 14px;

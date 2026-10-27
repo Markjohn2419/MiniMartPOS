@@ -370,13 +370,25 @@ window.miniMartDB = {
   sales() {
     return read(SALES_KEY, []);
   },
-  recordSale(items, total) {
+  recordSale(items, total, payment = {}) {
     const sales = this.sales();
     sales.push({
       id: crypto.randomUUID(),
       date: new Date().toISOString(),
       items: clone(items),
       total,
+      cashGiven: Number.isFinite(Number(payment.cashGiven))
+        ? Number(payment.cashGiven)
+        : null,
+      cashRequired: Number.isFinite(Number(payment.cashRequired))
+        ? Number(payment.cashRequired)
+        : null,
+      change: Number.isFinite(Number(payment.change))
+        ? Number(payment.change)
+        : null,
+      rewardUsed: Number.isFinite(Number(payment.rewardUsed))
+        ? Number(payment.rewardUsed)
+        : null,
     });
     write(SALES_KEY, sales);
   },
