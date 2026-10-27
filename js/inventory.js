@@ -165,28 +165,6 @@ function categoryIconPath(category) {
     : "Icons/bread.png";
 }
 
-function inventorySummary(products) {
-  const threshold = Number(window.miniMartSettings.get().lowStockThreshold) || 0;
-  document.getElementById("inventoryTotalProducts").textContent = products.length;
-  document.getElementById("inventoryTotalStock").textContent = products.reduce(
-    (sum, product) => sum + Number(product.stock || 0),
-    0,
-  );
-  document.getElementById("inventoryLowStock").textContent = products.filter(
-    (product) => Number(product.stock) > 0 && Number(product.stock) <= threshold,
-  ).length;
-  document.getElementById("inventoryOutOfStock").textContent = products.filter(
-    (product) => Number(product.stock) <= 0,
-  ).length;
-  document.getElementById("inventoryValue").textContent =
-    window.miniMartSettings.formatCurrency(
-      products.reduce(
-        (sum, product) => sum + Number(product.costPrice || 0) * Number(product.stock || 0),
-        0,
-      ),
-    );
-}
-
 function canonicalCategory(value, categories = window.miniMartDB.categories()) {
   const normalized = String(value || "").trim().toLowerCase();
   return (
@@ -215,7 +193,6 @@ function updateIconPicker() {
 
 function renderRows() {
   const products = window.miniMartDB.products();
-  inventorySummary(products);
   const categories = [
     ...window.miniMartDB.categories(),
     ...new Set(products.map((product) => product.category)),
