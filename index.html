@@ -222,6 +222,22 @@
               />
             </div>
 
+            <label for="paymentMethod"> PAYMENT METHOD </label>
+            <select id="paymentMethod" class="checkout-payment-select">
+              <option value="cash">Cash</option>
+              <option value="card">Card</option>
+              <option value="gcash">GCash</option>
+              <option value="split">Split payment</option>
+            </select>
+
+            <div class="split-payment-fields" id="splitPaymentFields" hidden>
+              <label for="cardGiven"> CARD / GCASH </label>
+              <div class="payment-input-wrap">
+                <span> &#8369; </span>
+                <input id="cardGiven" type="number" min="0" step="0.01" value="0" inputmode="decimal" />
+              </div>
+            </div>
+
             <!-- CHANGE -->
             <div class="change-row">
               <span> CHANGE </span>
@@ -235,10 +251,20 @@
             </p>
           </div>
 
+          <div class="checkout-register-controls" aria-label="Register shift controls">
+            <div>
+              <div class="eyebrow">REGISTER SHIFT</div>
+              <p>Record the cash in the drawer before selling.</p>
+            </div>
+            <button class="checkout-shift-button" id="shiftButton" type="button">OPEN SHIFT</button>
+          </div>
+
           <!-- SELL -->
-          <button class="sell-button" id="sellButton" type="button" disabled>
-            SELL
-          </button>
+          <div class="checkout-actions">
+            <button class="checkout-secondary-button" id="holdCartButton" type="button" disabled>HOLD CART</button>
+            <button class="checkout-secondary-button" id="resumeCartButton" type="button">RESUME CART</button>
+            <button class="sell-button" id="sellButton" type="button" disabled>SELL</button>
+          </div>
         </section>
       </main>
     </div>

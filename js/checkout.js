@@ -26,6 +26,12 @@ const sellButton = document.getElementById("sellButton");
 const paymentPanel = document.getElementById("paymentPanel");
 
 const amountGiven = document.getElementById("amountGiven");
+const paymentMethod = document.getElementById("paymentMethod");
+const cardGiven = document.getElementById("cardGiven");
+const splitPaymentFields = document.getElementById("splitPaymentFields");
+const holdCartButton = document.getElementById("holdCartButton");
+const resumeCartButton = document.getElementById("resumeCartButton");
+const shiftButton = document.getElementById("shiftButton");
 
 const changeAmount = document.getElementById("changeAmount");
 
@@ -45,6 +51,9 @@ let measuredEditName = null;
 let measuredMode = "quantity";
 let saleInProgress = false;
 let measureReturnFocus = null;
+const CART_STORAGE_KEY = "miniMartActiveCart";
+const HELD_CARTS_KEY = "miniMartHeldCarts";
+const SHIFT_STORAGE_KEY = "miniMartCurrentShift";
 
 const measureModal = document.getElementById("measureModal");
 const measureValue = document.getElementById("measureValue");
@@ -280,6 +289,15 @@ window.showNfcToast = showCheckoutToast;
    SUKI STORAGE
 ========================================================= */
 
+function legacySukiId(suki, index) {
+  const source = `${suki.name || ""}|${suki.phone || ""}|${suki.joined || ""}|${suki.nfcId || ""}|${index}`;
+  const hash = [...source].reduce(
+    (value, character) => (value * 31 + character.charCodeAt(0)) | 0,
+    0,
+  );
+  return `suki-legacy-${Math.abs(hash)}`;
+}
+
 function getSukis() {
   try {
     const saved = JSON.parse(localStorage.getItem(SUKI_STORAGE_KEY) || "[]");
@@ -288,8 +306,10 @@ function getSukis() {
       return [];
     }
 
-    return saved.map((suki) => ({
+    return saved.map((suki, index) => ({
       ...suki,
+      id: suki.id || legacySukiId(suki, index),
+      nfcId: window.normalizeNfcId ? window.normalizeNfcId(suki.nfcId || "") : String(suki.nfcId || "").trim().toUpperCase(),
 
       stamps: Number.isFinite(Number(suki.stamps))
         ? Math.max(0, Math.min(MAX_STAMPS, Number(suki.stamps)))
@@ -525,6 +545,112 @@ function escapeHtml(value) {
   );
 }
 
+function transactionNumber() {
+  const date = new Date();
+  const stamp = date.toISOString().replace(/\D/g, "").slice(0, 14);
+  return `TX-${stamp}-${Math.floor(Math.random() * 900 + 100)}`;
+}
+
+function getCurrentShift() {
+  try {
+    return JSON.parse(localStorage.getItem(SHIFT_STORAGE_KEY) || "null");
+  } catch (error) {
+    console.error("Failed to read current shift:", error);
+    return null;
+  }
+}
+
+function ensureCurrentShift() {
+  let shift = getCurrentShift();
+  if (!shift) {
+    shift = {
+      id: `SHIFT-${Date.now()}`,
+      openedAt: new Date().toISOString(),
+      openingCash: 0,
+      sales: 0,
+      cashSales: 0,
+    };
+    localStorage.setItem(SHIFT_STORAGE_KEY, JSON.stringify(shift));
+    updateShiftButton();
+    showCheckoutToast("A new shift was opened with ₱0.00 opening cash.", "success");
+  }
+  return shift;
+}
+
+function updateShiftButton() {
+  shiftButton.textContent = getCurrentShift() ? "CLOSE SHIFT" : "OPEN SHIFT";
+}
+
+function manageShift() {
+  const current = getCurrentShift();
+  if (!current) {
+    const openingCash = Number(window.prompt("Opening cash amount", "0"));
+    if (!Number.isFinite(openingCash) || openingCash < 0) {
+      showCheckoutToast("Enter a valid opening cash amount.");
+      return;
+    }
+    localStorage.setItem(SHIFT_STORAGE_KEY, JSON.stringify({
+      id: `SHIFT-${Date.now()}`,
+      openedAt: new Date().toISOString(),
+      openingCash,
+      sales: 0,
+      cashSales: 0,
+    }));
+    updateShiftButton();
+    showCheckoutToast("Shift opened.", "success");
+    return;
+  }
+  if (cart.size) {
+    showCheckoutToast("Hold or complete the current cart before closing the shift.");
+    return;
+  }
+  const closingCash = Number(window.prompt(
+    `Expected cash: ${peso(Number(current.openingCash) + Number(current.cashSales || 0))}\nEnter counted closing cash`,
+    "",
+  ));
+  if (!Number.isFinite(closingCash) || closingCash < 0) {
+    showCheckoutToast("Enter a valid closing cash amount.");
+    return;
+  }
+  const expectedCash = Number(current.openingCash) + Number(current.cashSales || 0);
+  const history = JSON.parse(localStorage.getItem("miniMartShiftHistory") || "[]");
+  history.unshift({
+    ...current,
+    closedAt: new Date().toISOString(),
+    closingCash,
+    expectedCash,
+    variance: window.miniMartDB.roundMoney(closingCash - expectedCash),
+  });
+  localStorage.setItem("miniMartShiftHistory", JSON.stringify(history.slice(0, 50)));
+  localStorage.removeItem(SHIFT_STORAGE_KEY);
+  updateShiftButton();
+  showCheckoutToast(`Shift closed. Variance: ${peso(closingCash - expectedCash)}.`, "success");
+}
+
+function saveActiveCart() {
+  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({
+    items: [...cart.values()],
+    amountGiven: amountGiven.value,
+    paymentMethod: paymentMethod.value,
+    cardGiven: cardGiven.value,
+  }));
+}
+
+function restoreActiveCart() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "null");
+    if (!saved?.items?.length) return;
+    saved.items.forEach((item) => cart.set(item.name, item));
+    amountGiven.value = saved.amountGiven || "";
+    paymentMethod.value = saved.paymentMethod || "cash";
+    cardGiven.value = saved.cardGiven || "0";
+    updatePaymentMethodUI();
+  } catch (error) {
+    console.error("Failed to restore active cart:", error);
+    localStorage.removeItem(CART_STORAGE_KEY);
+  }
+}
+
 function getSelectedSuki() {
   if (!selectedSukiId) {
     return null;
@@ -595,6 +721,9 @@ function safeAccent(value) {
 
 function renderProducts() {
   const products = window.miniMartDB.products();
+  const favorites = new Set(
+    JSON.parse(localStorage.getItem("miniMartFavoriteProducts") || "[]"),
+  );
 
   const categories = [
     ...window.miniMartDB.categories(),
@@ -679,6 +808,7 @@ function renderProducts() {
 
                   <h2>
                     ${escapeHtml(product.name)}
+                    <button type="button" class="product-favorite${favorites.has(product.name) ? " is-favorite" : ""}" data-favorite="${escapeHtml(product.name)}" aria-label="${favorites.has(product.name) ? "Remove from" : "Add to"} favorites">★</button>
                   </h2>
 
                   <p class="price">
@@ -711,9 +841,46 @@ function renderProducts() {
 
   productCards = [...productsSection.querySelectorAll(".product")];
 
+  const recentNames = JSON.parse(
+    localStorage.getItem("miniMartRecentProducts") || "[]",
+  );
+  const recentProducts = recentNames
+    .map((name) => products.find((product) => product.name === name))
+    .filter(Boolean)
+    .slice(0, 5);
+  if (recentProducts.length) {
+    const recentBar = document.createElement("div");
+    recentBar.className = "checkout-recent-products";
+    recentBar.innerHTML = `<span>RECENT</span>${recentProducts
+      .map((product) => `<button type="button" data-recent-product="${escapeHtml(product.name)}">${escapeHtml(product.name)}</button>`)
+      .join("")}`;
+    productsSection.prepend(recentBar);
+    recentBar.querySelectorAll("[data-recent-product]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const product = products.find((entry) => entry.name === button.dataset.recentProduct);
+        if (product) addProductToCart(product);
+      });
+    });
+  }
+
   productCards.forEach((product) =>
     product.addEventListener("click", addToCart),
   );
+  productsSection.querySelectorAll("[data-favorite]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const current = new Set(
+        JSON.parse(localStorage.getItem("miniMartFavoriteProducts") || "[]"),
+      );
+      if (current.has(button.dataset.favorite)) {
+        current.delete(button.dataset.favorite);
+      } else {
+        current.add(button.dataset.favorite);
+      }
+      localStorage.setItem("miniMartFavoriteProducts", JSON.stringify([...current]));
+      button.classList.toggle("is-favorite", current.has(button.dataset.favorite));
+    });
+  });
   productCards.forEach((product) =>
     product.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
@@ -783,6 +950,10 @@ function addProductToCart(product) {
   item.quantity += 1;
 
   cart.set(name, item);
+  const recent = JSON.parse(localStorage.getItem("miniMartRecentProducts") || "[]")
+    .filter((entry) => entry !== name);
+  recent.unshift(name);
+  localStorage.setItem("miniMartRecentProducts", JSON.stringify(recent.slice(0, 8)));
 
   renderCart();
   return "added";
@@ -1028,8 +1199,10 @@ function openCheckoutConfirmation() {
   if (!cart.size) return;
   updatePayment();
   if (sellButton.disabled) return;
-  const total = getCartTotal();
+  const { subtotal, tax, total } = getSaleAmounts();
   const paid = Number(amountGiven.value);
+  const card = Number(cardGiven.value);
+  const received = paymentMethod.value === "split" ? paid + card : paid;
   const rewardUsed = Math.max(
     0,
     Math.min(Number(document.getElementById("rewardAmount")?.value || 0), total),
@@ -1041,10 +1214,10 @@ function openCheckoutConfirmation() {
         `<div class="checkout-confirm-item"><span>${escapeHtml(item.name)} <small>×${item.quantity}</small></span><strong>${peso(item.lineTotal ?? item.price * item.quantity)}</strong></div>`,
     )
     .join("");
-  document.getElementById("confirmSubtotal").textContent = peso(total);
+  document.getElementById("confirmSubtotal").textContent = peso(subtotal);
   document.getElementById("confirmReward").textContent = peso(rewardUsed);
-  document.getElementById("confirmCash").textContent = peso(paid);
-  document.getElementById("confirmChange").textContent = peso(Math.max(paid - due, 0));
+  document.getElementById("confirmCash").textContent = peso(received);
+  document.getElementById("confirmChange").textContent = peso(Math.max(received - due, 0));
   document.getElementById("confirmDue").textContent = peso(due);
   checkoutConfirmError.hidden = true;
   checkoutConfirmModal.hidden = false;
@@ -1086,9 +1259,11 @@ function completeSale() {
 
   const entries = [...cart.values()];
 
-  const total = getCartTotal();
+  const { total } = getSaleAmounts();
 
   const paid = Number(amountGiven.value);
+  const card = Number(cardGiven.value);
+  const received = paymentMethod.value === "split" ? paid + card : paid;
 
   const suki = getSelectedSuki();
 
@@ -1106,7 +1281,21 @@ function completeSale() {
     if (rewardInput) rewardInput.value = "0";
   }
 
-  if (!entries.length || !Number.isFinite(paid)) {
+  if (!entries.length) {
+    paymentError.hidden = false;
+    paymentError.textContent = "Add at least one product before completing the sale.";
+    updatePayment();
+    saleInProgress = false;
+    return;
+  }
+
+  if (
+    amountGiven.value.trim() === "" ||
+    !Number.isFinite(paid) ||
+    paid < 0
+  ) {
+    paymentError.hidden = false;
+    paymentError.textContent = "Enter a valid cash amount.";
     updatePayment();
     saleInProgress = false;
     return;
@@ -1139,10 +1328,13 @@ function completeSale() {
     rewardUsed = 0;
   }
 
+  rewardUsed = window.miniMartDB.roundMoney(rewardUsed);
   const cashRequired = Math.max(total - rewardUsed, 0);
-  const change = Math.max(paid - cashRequired, 0);
+  const change = Math.max(received - cashRequired, 0);
 
-  if (!Number.isFinite(paid) || paid < cashRequired) {
+  if (received < cashRequired) {
+    paymentError.hidden = false;
+    paymentError.textContent = `Need ${peso(cashRequired)} cash after rewards.`;
     updatePayment();
     saleInProgress = false;
     return;
@@ -1333,12 +1525,24 @@ function completeSale() {
 
   try {
     window.miniMartDB.saveProducts(inventory);
+    const shift = ensureCurrentShift();
     window.miniMartDB.recordSale(saleItems, total, {
+      transactionNumber: transactionNumber(),
+      paymentMethod: paymentMethod.value,
+      payments: {
+        cash: paid,
+        card: paymentMethod.value === "card" ? paid : card,
+        gcash: paymentMethod.value === "gcash" ? paid : 0,
+      },
+      shiftId: shift.id,
       cashGiven,
       cashRequired,
       change,
       rewardUsed,
     });
+    shift.sales += 1;
+    shift.cashSales += paid;
+    localStorage.setItem(SHIFT_STORAGE_KEY, JSON.stringify(shift));
   } catch (error) {
     if (productsSnapshot === null) {
       localStorage.removeItem("miniMartProducts");
@@ -1368,6 +1572,10 @@ function completeSale() {
   cart.clear();
 
   amountGiven.value = "";
+  cardGiven.value = "0";
+  paymentMethod.value = "cash";
+  updatePaymentMethodUI();
+  localStorage.removeItem(CART_STORAGE_KEY);
 
   /*
    * FIX:
@@ -1401,12 +1609,19 @@ function completeSale() {
 ========================================================= */
 
 function updatePayment() {
-  const total = getCartTotal();
-
+  const amounts = getSaleAmounts();
+  const total = amounts.total;
+  const method = paymentMethod.value;
   const paid = Number(amountGiven.value);
-
+  const card = Number(cardGiven.value);
+  const validCash = Number.isFinite(paid) && paid >= 0;
+  const validCard = Number.isFinite(card) && card >= 0;
+  const received = method === "split" ? paid + card : paid;
   const validPayment =
-    amountGiven.value !== "" && Number.isFinite(paid) && paid >= 0;
+    amountGiven.value !== "" &&
+    validCash &&
+    validCard &&
+    received >= 0;
 
   const suki = getSelectedSuki();
 
@@ -1437,13 +1652,13 @@ function updatePayment() {
   }
 
   const cashRequired = Math.max(total - rewardUsed, 0);
+  const change = validPayment ? Math.max(received - cashRequired, 0) : 0;
 
-  const change = validPayment ? paid - cashRequired : 0;
+  changeAmount.innerHTML = peso(change);
 
-  changeAmount.innerHTML = peso(Math.max(change, 0));
-
-  const insufficient = validPayment && paid < cashRequired;
-  const invalidPayment = amountGiven.value !== "" && !validPayment;
+  const insufficient = validPayment && received < cashRequired;
+  const invalidPayment =
+    amountGiven.value !== "" && (!validCash || !validCard);
 
   paymentError.hidden = !insufficient && !invalidPayment;
 
@@ -1455,9 +1670,24 @@ function updatePayment() {
 
   sellButton.disabled =
     !cart.size || insufficient || invalidPayment || !validPayment;
+  holdCartButton.disabled = !cart.size;
+  saveActiveCart();
 }
 
 amountGiven.addEventListener("input", updatePayment);
+cardGiven.addEventListener("input", updatePayment);
+paymentMethod.addEventListener("change", () => {
+  updatePaymentMethodUI();
+  updatePayment();
+});
+
+function updatePaymentMethodUI() {
+  const isSplit = paymentMethod.value === "split";
+  splitPaymentFields.hidden = !isSplit;
+  if (!isSplit) cardGiven.value = "0";
+  amountGiven.previousElementSibling.textContent =
+    paymentMethod.value === "cash" || isSplit ? " ₱ " : " ₱ ";
+}
 
 /* =========================================================
    CART
@@ -1470,6 +1700,14 @@ function getCartTotal() {
       0,
     ),
   );
+}
+
+function getSaleAmounts() {
+  const subtotal = getCartTotal();
+  return {
+    subtotal,
+    total: subtotal,
+  };
 }
 
 function renderCart() {
@@ -1509,7 +1747,20 @@ function renderCart() {
                 ${peso(item.lineTotal ?? item.quantity * item.price)}
               </strong>
 
+              ${
+                item.unit && measuredUnit(item.unit)
+                  ? ""
+                  : `
+                    <span class="cart-quantity-controls" aria-label="Quantity for ${escapeHtml(item.name)}">
+                      <button type="button" class="cart-quantity-button" data-decrement="${escapeHtml(item.name)}" aria-label="Decrease ${escapeHtml(item.name)} quantity">−</button>
+                      <span class="cart-quantity">${item.quantity}</span>
+                      <button type="button" class="cart-quantity-button" data-increment="${escapeHtml(item.name)}" aria-label="Increase ${escapeHtml(item.name)} quantity">+</button>
+                    </span>
+                  `
+              }
+
               <button
+                type="button"
                 class="remove"
                 data-remove="${escapeHtml(item.name)}"
                 aria-label="Remove ${escapeHtml(item.name)}"
@@ -1522,9 +1773,49 @@ function renderCart() {
     )
     .join("");
 
-  document.getElementById("totalAmount").innerHTML = peso(getCartTotal());
+  document.getElementById("totalAmount").innerHTML = peso(getSaleAmounts().total);
 
   updatePayment();
+
+  cartItems.querySelectorAll("[data-increment]").forEach((button) =>
+    button.addEventListener("click", () => {
+      const item = cart.get(button.dataset.increment);
+      if (!item) return;
+      const product = window.miniMartDB.products().find(
+        (entry) => entry.name === item.name,
+      );
+      if (!product) return;
+
+      const stock = Number(product.stock);
+      if (
+        window.miniMartSettings.get().blockOutOfStockSales !== false &&
+        item.quantity >= stock
+      ) {
+        showCheckoutToast(
+          stock <= 0
+            ? "This product is out of stock."
+            : `Only ${stock} unit${stock === 1 ? "" : "s"} available.`,
+        );
+        return;
+      }
+
+      item.quantity += 1;
+      renderCart();
+    }),
+  );
+
+  cartItems.querySelectorAll("[data-decrement]").forEach((button) =>
+    button.addEventListener("click", () => {
+      const item = cart.get(button.dataset.decrement);
+      if (!item) return;
+      if (item.quantity <= 1) {
+        cart.delete(item.name);
+      } else {
+        item.quantity -= 1;
+      }
+      renderCart();
+    }),
+  );
 
   cartItems.querySelectorAll("[data-remove]").forEach((button) =>
     button.addEventListener("click", () => {
@@ -1546,6 +1837,58 @@ function renderCart() {
   );
 }
 
+function holdCurrentCart() {
+  if (!cart.size) return;
+  const held = JSON.parse(localStorage.getItem(HELD_CARTS_KEY) || "[]");
+  held.unshift({
+    id: `HOLD-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    items: [...cart.values()],
+  });
+  localStorage.setItem(HELD_CARTS_KEY, JSON.stringify(held.slice(0, 10)));
+  cart.clear();
+  amountGiven.value = "";
+  cardGiven.value = "0";
+  renderCart();
+  showCheckoutToast("Cart held. Use RESUME CART to restore it.", "success");
+}
+
+function resumeHeldCart() {
+  const held = JSON.parse(localStorage.getItem(HELD_CARTS_KEY) || "[]");
+  if (!held.length) {
+    showCheckoutToast("There are no held carts.");
+    return;
+  }
+  if (cart.size && !window.confirm("Replace the current cart with the held cart?")) {
+    return;
+  }
+  const [next, ...remaining] = held;
+  localStorage.setItem(HELD_CARTS_KEY, JSON.stringify(remaining));
+  cart.clear();
+  next.items.forEach((item) => cart.set(item.name, item));
+  renderCart();
+  showCheckoutToast("Held cart restored.", "success");
+}
+
+holdCartButton.addEventListener("click", holdCurrentCart);
+resumeCartButton.addEventListener("click", resumeHeldCart);
+shiftButton.addEventListener("click", manageShift);
+window.addEventListener("beforeunload", (event) => {
+  if (!cart.size) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
+document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey && event.key.toLowerCase() === "enter") {
+    event.preventDefault();
+    if (!sellButton.disabled) openCheckoutConfirmation();
+  }
+  if (event.key === "/" && document.activeElement !== search) {
+    event.preventDefault();
+    search.focus();
+  }
+});
+
 /* =========================================================
    INITIALIZE
 ========================================================= */
@@ -1554,8 +1897,10 @@ createSukiCheckoutUI();
 
 renderProducts();
 
+restoreActiveCart();
 renderCart();
 
 refreshSukiSelector();
+updateShiftButton();
 
 search.focus({ preventScroll: true });

@@ -71,6 +71,11 @@
           </div>
         </div>
 
+        <label class="settings-search">
+          <span class="sr-only">Search settings</span>
+          <input id="settingsSearch" type="search" placeholder="Search settings..." autocomplete="off" />
+        </label>
+
         <div class="settings-tabs" role="tablist" aria-label="Settings panels">
           <button class="settings-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="storeInfoSection" data-settings-panel="storeInfoSection">Store</button>
           <button class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="inventoryRulesSection" data-settings-panel="inventoryRulesSection">Inventory</button>
@@ -79,6 +84,7 @@
           <button class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="backupSection" data-settings-panel="backupSection">Data &amp; Backup</button>
           <button class="settings-tab" type="button" role="tab" aria-selected="false" aria-controls="appearanceSection" data-settings-panel="appearanceSection">Appearance</button>
         </div>
+        <p class="settings-search-empty" id="settingsSearchEmpty" hidden>No settings match your search.</p>
 
         <section class="settings-cards" aria-label="Settings sections">
           <article class="settings-card is-active-panel" id="storeInfoSection" role="tabpanel" tabindex="-1">
@@ -322,7 +328,19 @@
               </div>
               <p class="settings-help">Restoring replaces products, sales, categories, customers, inventory history, and settings after confirmation.</p>
               <div class="backup-summary" id="backupSummary" role="status" aria-live="polite"></div>
+              <div class="backup-restore-preview" id="backupRestorePreview" hidden>
+                <strong>Restore preview</strong>
+                <span id="backupRestorePreviewText"></span>
+              </div>
               <div class="settings-status" id="backupStatus" role="status" aria-live="polite"></div>
+              <div class="data-health-panel">
+                <div>
+                  <h4>Data health</h4>
+                  <p class="settings-help">Check for malformed or inconsistent records before exporting or restoring.</p>
+                </div>
+                <button class="settings-button-secondary" id="runDataHealthCheck" type="button">RUN CHECK</button>
+                <div class="data-health-results" id="dataHealthResults" role="status" aria-live="polite"></div>
+              </div>
               <div class="settings-subsection-heading inventory-history-export">
                 <div>
                   <h4>Inventory history</h4>

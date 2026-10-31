@@ -72,6 +72,7 @@
             </button>
           </div>
         </div>
+        <div class="inventory-summary" id="inventorySummary" aria-live="polite"></div>
         <div class="search-wrap">
           <span aria-hidden="true">⌕</span>
           <input
@@ -84,6 +85,26 @@
             autocorrect="off"
             spellcheck="false"
           />
+        </div>
+        <div class="inventory-view-toolbar">
+          <label>View
+            <select id="inventoryFilter">
+              <option value="all">All products</option>
+              <option value="low">Low stock</option>
+              <option value="out">Out of stock</option>
+              <option value="expiring">Expiring soon</option>
+            </select>
+          </label>
+          <label>Sort
+            <select id="inventorySort">
+              <option value="name">Name</option>
+              <option value="category">Category</option>
+              <option value="stock">Stock</option>
+              <option value="price">Price</option>
+              <option value="value">Stock value</option>
+              <option value="expiry">Expiry date</option>
+            </select>
+          </label>
         </div>
         <div class="bulk-toolbar" aria-label="Product selection">
           <p id="selectionSummary" role="status">Select products to edit together.</p>
@@ -102,6 +123,7 @@
                 <th>Cost</th>
                 <th>Price</th>
                 <th>Stock</th>
+                <th>Expiry</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -112,7 +134,7 @@
         <div class="inventory-bulk-bar" id="inventoryBulkBar" hidden>
           <strong><span id="selectedProductCount">0</span> selected</strong>
           <button id="adjustSelectedStock" type="button">ADJUST STOCK</button>
-          <button id="clearSelectedProducts" type="button">CLEAR</button>
+          <button id="undoStockAdjustment" type="button" disabled>UNDO LAST</button>
         </div>
       </main>
     </div>
@@ -280,9 +302,8 @@
                 <small class="field-error" id="productPriceError"></small>
               </label>
               <label
-                >
+                ><span id="productStockLabel">Stock (pcs)</span>
                 <span class="stock-input-wrap">
-                  <span id="productStockLabel">Stock (pcs)</span>
                   <input
                     id="productStock"
                     type="number"
@@ -305,6 +326,11 @@
                   <option value="pack">Pack</option>
                 </select>
               </label>
+              <label><span>Supplier</span><input id="productSupplier" type="text" maxlength="80" /></label>
+              <label><span>Batch / lot</span><input id="productBatch" type="text" maxlength="40" /></label>
+              <label><span>Expiry date</span><input id="productExpiry" type="date" /></label>
+              <label><span>Restock minimum</span><input id="productRestockMin" type="number" min="0" step="1" /></label>
+              <label><span>Restock target</span><input id="productRestockTarget" type="number" min="0" step="1" /></label>
             </div>
             <p class="field-warning" id="lossWarning" hidden>You would sell at a loss. Confirm to continue.</p>
             <label class="loss-confirm" id="lossConfirmField" hidden>

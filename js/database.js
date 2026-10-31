@@ -231,6 +231,7 @@ function normalizeProducts(products) {
     return {
       ...seed,
       ...product,
+      id: product.id || `product-${String(product.name).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       category: product.category || seed.category || "Snacks",
       icon: product.icon || seed.icon || "◇",
       accent: product.accent || seed.accent || "var(--gold)",
@@ -370,13 +371,21 @@ window.miniMartDB = {
   sales() {
     return read(SALES_KEY, []);
   },
+  saveSales(sales) {
+    write(SALES_KEY, clone(sales));
+  },
   recordSale(items, total, payment = {}) {
     const sales = this.sales();
     sales.push({
-      id: crypto.randomUUID(),
+      id: payment.transactionNumber || crypto.randomUUID(),
       date: new Date().toISOString(),
       items: clone(items),
       total,
+      transactionNumber: payment.transactionNumber || null,
+      paymentMethod: payment.paymentMethod || "cash",
+      payments: clone(payment.payments || {}),
+      shiftId: payment.shiftId || null,
+      status: payment.status || "completed",
       cashGiven: Number.isFinite(Number(payment.cashGiven))
         ? Number(payment.cashGiven)
         : null,

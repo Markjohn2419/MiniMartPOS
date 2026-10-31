@@ -172,6 +172,15 @@ function createId() {
     return window.crypto.randomUUID();
   }
 
+  function stableLegacyId(suki, index) {
+    const source = `${suki.name || ""}|${suki.phone || ""}|${suki.joined || ""}|${suki.nfcId || ""}|${index}`;
+    let hash = 0;
+    for (let position = 0; position < source.length; position += 1) {
+      hash = (hash * 31 + source.charCodeAt(position)) | 0;
+    }
+    return `suki-legacy-${Math.abs(hash)}`;
+  }
+
   return "suki-" + Date.now() + "-" + Math.random().toString(36).slice(2);
 }
 
@@ -219,10 +228,10 @@ function getSukis() {
       return [];
     }
 
-    return saved.map((suki) => ({
+    return saved.map((suki, index) => ({
       ...suki,
 
-      id: suki.id || createId(),
+      id: suki.id || stableLegacyId(suki, index),
 
       name: suki.name || "",
 
@@ -230,7 +239,7 @@ function getSukis() {
 
       joined: suki.joined || "",
 
-      nfcId: suki.nfcId || "",
+      nfcId: normalizeNfcId(suki.nfcId || ""),
 
       stamps: clamp(Number(suki.stamps) || 0, 0, MAX_STAMPS),
 
@@ -252,7 +261,16 @@ function getSukis() {
 }
 
 function saveSukis(sukis) {
-  localStorage.setItem(SUKI_STORAGE_KEY, JSON.stringify(sukis));
+  localStorage.setItem(
+    SUKI_STORAGE_KEY,
+    JSON.stringify(
+      sukis.map((suki) => ({
+        ...suki,
+        id: suki.id || createId(),
+        nfcId: normalizeNfcId(suki.nfcId || ""),
+      })),
+    ),
+  );
 }
 
 function renderSukiOverview() {
@@ -1597,6 +1615,11 @@ document.addEventListener("keydown", (event) => {
 
 if (sukiJoined) {
   sukiJoined.value = new Date().toISOString().split("T")[0];
+}
+
+const normalizedSukis = getSukis();
+if (normalizedSukis.length) {
+  saveSukis(normalizedSukis);
 }
 
 renderSukiList();

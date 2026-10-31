@@ -11,19 +11,28 @@ void (async () => {
 
 const peso = (value) => window.miniMartSettings.formatCurrency(value);
 const products = window.miniMartDB.products();
-const sales = window.miniMartDB.sales();
+const allSales = window.miniMartDB.sales().filter((sale) => sale.status !== "voided");
 const itemCounts = new Map();
 const categoryCounts = new Map();
 const categoryRevenue = new Map();
 const lastUpdated = document.getElementById("lastUpdated");
+function numericValue(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
 const LOW_STOCK_THRESHOLD = Number.isInteger(
   Number(window.miniMartSettings?.get().lowStockThreshold),
 )
   ? Number(window.miniMartSettings.get().lowStockThreshold)
   : 10;
+const lowStockThreshold = (product) => {
+  const configured = numericValue(product?.restockMin);
+  return configured > 0 ? configured : LOW_STOCK_THRESHOLD;
+};
 const lowStockProductNames = new Set(
   products
-    .filter((product) => product.stock <= LOW_STOCK_THRESHOLD)
+    .filter((product) => product.stock <= lowStockThreshold(product))
     .map((product) => product.name),
 );
 
@@ -52,10 +61,91 @@ function escapeHtml(value) {
   })[character]);
 }
 
-function numericValue(value, fallback = 0) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
+const reportParams = new URLSearchParams(window.location.search);
+const reportPeriod = document.getElementById("reportPeriod");
+const reportCategory = document.getElementById("reportCategory");
+const reportProduct = document.getElementById("reportProduct");
+const reportCustomRange = document.getElementById("reportCustomRange");
+const reportFrom = document.getElementById("reportFrom");
+const reportTo = document.getElementById("reportTo");
+const todayKey = new Date().toISOString().slice(0, 10);
+const categoryOptions = [...new Set(products.map((product) => product.category || "Other"))].sort();
+categoryOptions.forEach((category) => {
+  reportCategory.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`);
+});
+products
+  .slice()
+  .sort((first, second) => first.name.localeCompare(second.name))
+  .forEach((product) => {
+    reportProduct.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(product.name)}">${escapeHtml(product.name)}</option>`);
+  });
+reportPeriod.value = reportParams.get("period") || "today";
+reportCategory.value = reportParams.get("category") || "all";
+reportProduct.value = reportParams.get("product") || "all";
+reportFrom.value = reportParams.get("from") || "";
+reportTo.value = reportParams.get("to") || "";
+reportCustomRange.hidden = reportPeriod.value !== "custom";
+const periodLabel = reportPeriod.value === "today"
+  ? "Today"
+  : reportPeriod.value === "all"
+    ? "All time"
+    : reportPeriod.value === "custom"
+      ? "Custom range"
+      : `Last ${reportPeriod.value} days`;
+["revenueMetricLabel", "salesMetricLabel", "profitMetricLabel"].forEach((id) => {
+  const metric = id === "salesMetricLabel" ? "Sales" : id === "profitMetricLabel" ? "Profit" : "Revenue";
+  document.getElementById(id).textContent = periodLabel === "Today" ? `Today's ${metric}` : `${periodLabel} ${metric}`;
+});
+document.getElementById("productsMetricLabel").textContent = `${periodLabel} Products Sold`;
+document.getElementById("salesTrendNote").textContent = "Last 7 days";
+document.getElementById("profitTrendNote").textContent = "Last 7 days";
+function reloadWithReportFilters() {
+  const params = new URLSearchParams();
+  params.set("period", reportPeriod.value);
+  if (reportCategory.value !== "all") params.set("category", reportCategory.value);
+  if (reportProduct.value !== "all") params.set("product", reportProduct.value);
+  if (reportPeriod.value === "custom") {
+    if (reportFrom.value) params.set("from", reportFrom.value);
+    if (reportTo.value) params.set("to", reportTo.value);
+  }
+  window.location.search = params.toString();
 }
+reportPeriod.addEventListener("change", () => {
+  reportCustomRange.hidden = reportPeriod.value !== "custom";
+  if (reportPeriod.value !== "custom" || (reportFrom.value && reportTo.value)) reloadWithReportFilters();
+});
+[reportCategory, reportProduct, reportFrom, reportTo].forEach((control) => {
+  control.addEventListener("change", reloadWithReportFilters);
+});
+document.getElementById("resetReportFilters").addEventListener("click", () => {
+  window.location.search = "";
+});
+document.getElementById("refreshReports").addEventListener("click", () => window.location.reload());
+
+function itemsForReport(sale) {
+  return (sale.items || []).filter((item) => {
+    const category = categoryForItem(item);
+    return (reportCategory.value === "all" || category === reportCategory.value) &&
+      (reportProduct.value === "all" || item.name === reportProduct.value);
+  });
+}
+
+function saleMatchesReport(sale) {
+  const saleDate = new Date(sale.date);
+  const saleKey = saleDate.toISOString().slice(0, 10);
+  const period = reportPeriod.value;
+  if (period === "today" && saleKey !== todayKey) return false;
+  if (period === "7" || period === "30") {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - Number(period) + 1);
+    if (saleDate < start) return false;
+  }
+  if (period === "custom" && ((reportFrom.value && saleKey < reportFrom.value) || (reportTo.value && saleKey > reportTo.value))) return false;
+  return itemsForReport(sale).length > 0;
+}
+
+const sales = allSales.filter(saleMatchesReport);
 
 function categoryForItem(item) {
   const product = products.find((entry) => entry.name === item.name);
@@ -91,7 +181,7 @@ window.addEventListener("miniMartDatabaseChanged", (event) => {
 });
 
 sales.forEach((sale) =>
-  sale.items.forEach((item) => {
+  itemsForReport(sale).forEach((item) => {
     itemCounts.set(item.name, (itemCounts.get(item.name) || 0) + item.quantity);
     const category = categoryForItem(item);
     categoryCounts.set(
@@ -119,7 +209,7 @@ products.forEach((product) => {
     lowStock: 0,
   };
   current.stock += numericValue(product.stock);
-  if (numericValue(product.stock) <= LOW_STOCK_THRESHOLD) current.lowStock += 1;
+  if (numericValue(product.stock) <= lowStockThreshold(product)) current.lowStock += 1;
   categoryOverview.set(category, current);
 });
 categoryCounts.forEach((units, category) => {
@@ -161,20 +251,24 @@ const trendDayStats = trendDays.map((day) => {
   return {
     day,
     revenue: daySales.reduce(
-      (sum, sale) => sum + numericValue(sale.total),
+      (sum, sale) =>
+        sum + itemsForReport(sale).reduce(
+          (total, item) => total + numericValue(item.lineTotal, numericValue(item.price) * numericValue(item.quantity)),
+          0,
+        ),
       0,
     ),
     transactions: daySales.length,
     items: daySales.reduce(
       (sum, sale) =>
         sum +
-        sale.items.reduce((itemTotal, item) => itemTotal + item.quantity, 0),
+        itemsForReport(sale).reduce((itemTotal, item) => itemTotal + item.quantity, 0),
       0,
     ),
     lowStockItemSales: daySales.reduce(
       (sum, sale) =>
         sum +
-        sale.items.reduce(
+        itemsForReport(sale).reduce(
           (itemTotal, item) =>
             itemTotal +
             (lowStockProductNames.has(item.name) ? item.quantity : 0),
@@ -223,33 +317,55 @@ const yesterdayStats = trendDayStats[trendDayStats.length - 2] || {
 const todayRevenue = todayStats.revenue;
 const productsSold = sales.reduce(
   (sum, sale) =>
-    sum + sale.items.reduce((items, item) => items + item.quantity, 0),
+    sum + itemsForReport(sale).reduce((items, item) => items + item.quantity, 0),
   0,
 );
-document.getElementById("todayRevenue").innerHTML = peso(todayRevenue);
-document.getElementById("todaySales").textContent = todayStats.transactions;
+const scopedRevenue = sales.reduce(
+  (sum, sale) =>
+    sum + itemsForReport(sale).reduce(
+      (total, item) => total + numericValue(item.lineTotal, numericValue(item.price) * numericValue(item.quantity)),
+      0,
+    ),
+  0,
+);
+const scopedTransactions = sales.length;
+const scopedItems = productsSold;
+document.getElementById("todayRevenue").innerHTML = peso(scopedRevenue);
+document.getElementById("todaySales").textContent = scopedTransactions;
 document.getElementById("productsSold").textContent = productsSold;
 document.getElementById("productsSoldNote").textContent = "Across all sales";
 const lowStockProducts = products
-  .filter((product) => product.stock <= LOW_STOCK_THRESHOLD)
+  .filter((product) => product.stock <= lowStockThreshold(product))
   .sort((first, second) => first.stock - second.stock);
+const expiryLimit = new Date();
+expiryLimit.setHours(23, 59, 59, 999);
+expiryLimit.setDate(expiryLimit.getDate() + 30);
+const outOfStockProducts = products.filter((product) => numericValue(product.stock) <= 0);
+const expiringProducts = products.filter((product) => {
+  if (!product.expiryDate) return false;
+  const expiry = new Date(`${product.expiryDate}T23:59:59`);
+  return expiry >= new Date() && expiry <= expiryLimit;
+});
 document.getElementById("lowStockItems").textContent = lowStockProducts.length;
+document.getElementById("outOfStockItems").textContent = outOfStockProducts.length;
+document.getElementById("alertLowStockItems").textContent = lowStockProducts.length;
+document.getElementById("expiringItems").textContent = expiringProducts.length;
 setTrendNote(
   "todayRevenueNote",
-  todayStats.revenue,
-  yesterdayStats.revenue,
+  scopedRevenue,
+  reportPeriod.value === "today" ? yesterdayStats.revenue : 0,
   "revenue",
 );
 setTrendNote(
   "todaySalesNote",
-  todayStats.transactions,
-  yesterdayStats.transactions,
+  scopedTransactions,
+  reportPeriod.value === "today" ? yesterdayStats.transactions : 0,
   "transactions",
 );
 setTrendNote(
   "productsSoldNote",
-  todayStats.items,
-  yesterdayStats.items,
+  scopedItems,
+  reportPeriod.value === "today" ? yesterdayStats.items : 0,
   "items sold",
 );
 setTrendNote(
@@ -259,7 +375,7 @@ setTrendNote(
   "low-stock sales",
 );
 document.getElementById("lowStockIntro").textContent =
-  `Products with ${LOW_STOCK_THRESHOLD} units or fewer remaining.`;
+  "Products at or below their configured restock minimum.";
 document.getElementById("lowStockList").innerHTML =
   lowStockProducts
     .map(
@@ -298,7 +414,7 @@ document.addEventListener("keydown", (event) => {
 
 const productLastSoldTime = sales.reduce((latest, sale) => {
   const saleTimestamp = new Date(sale.date).getTime();
-  sale.items.forEach((item) => {
+  itemsForReport(sale).forEach((item) => {
     const current = latest.get(item.name) || 0;
     if (saleTimestamp > current) latest.set(item.name, saleTimestamp);
   });
@@ -372,10 +488,7 @@ const points = trendValues
 document.getElementById("trendChart").innerHTML =
   `<svg class="trend-line" viewBox="0 0 100 150" preserveAspectRatio="none" aria-hidden="true"><polyline points="${points}" fill="none" stroke="var(--blue)" stroke-width="1.8" vector-effect="non-scaling-stroke"/><polyline points="${points} 100,150 0,150" fill="rgba(43,117,145,.08)" stroke="none"/></svg>`;
 document.getElementById("trendLabels").innerHTML = trendDays
-  .map(
-    (day) =>
-      `<span>${day.toLocaleDateString("en-US", { weekday: "short" })}</span>`,
-  )
+  .map((day, index) => `<span>${day.toLocaleDateString("en-US", { weekday: "short" })}<b>${peso(trendDayStats[index].revenue)}</b></span>`)
   .join("");
 
 function renderStackedChart(
@@ -391,7 +504,7 @@ function renderStackedChart(
       : buckets.map((bucket) => {
           const totals = {};
           bucket.sales.forEach((sale) =>
-            sale.items.forEach((item) => {
+            itemsForReport(sale).forEach((item) => {
               const category = categoryForItem(item);
               totals[category] =
                 (totals[category] || 0) +
@@ -511,7 +624,14 @@ const monthValues = monthBuckets.map((month) =>
         date.getMonth() === month.getMonth()
       );
     })
-    .reduce((sum, sale) => sum + sale.total, 0),
+    .reduce(
+      (sum, sale) =>
+        sum + itemsForReport(sale).reduce(
+          (total, item) => total + numericValue(item.lineTotal, numericValue(item.price) * numericValue(item.quantity)),
+          0,
+        ),
+      0,
+    ),
 );
 const monthSalesBuckets = monthBuckets.map((month) => ({
   sales: sales.filter((sale) => {
@@ -540,7 +660,7 @@ const categoryInventory = [
     };
     current.total += product.stock;
     current.products.push(product);
-    if (product.stock <= LOW_STOCK_THRESHOLD)
+    if (product.stock <= lowStockThreshold(product))
       current.lowItems.push(product.name);
     groups.set(product.category, current);
     return groups;
@@ -574,7 +694,7 @@ const highlightLowStockCategory = (category) => {
   if (!categoryInfo) return;
   const [, values] = categoryInfo;
   const lowList = values.products
-    .filter((product) => product.stock <= LOW_STOCK_THRESHOLD)
+    .filter((product) => product.stock <= lowStockThreshold(product))
     .sort((first, second) => first.stock - second.stock)
     .map(
       (product) =>
@@ -593,26 +713,26 @@ inventoryBarsElement.querySelectorAll(".inventory-bar").forEach((bar) => {
   bar.addEventListener("click", () => {
     highlightLowStockCategory(bar.dataset.category);
   });
+});
 
-  function focusCategoryInventory(category) {
-    const bar = [...inventoryBarsElement.querySelectorAll(".inventory-bar")].find(
-      (entry) => entry.dataset.category === category,
-    );
-    if (!bar) return;
-    [...inventoryBarsElement.querySelectorAll(".inventory-bar")].forEach((entry) => {
-      entry.classList.toggle("active", entry === bar);
-    });
-    bar.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
+function focusCategoryInventory(category) {
+  const bar = [...inventoryBarsElement.querySelectorAll(".inventory-bar")].find(
+    (entry) => entry.dataset.category === category,
+  );
+  if (!bar) return;
+  [...inventoryBarsElement.querySelectorAll(".inventory-bar")].forEach((entry) => {
+    entry.classList.toggle("active", entry === bar);
+  });
+  bar.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 
-  document.querySelectorAll(".category-overview-card[data-category]").forEach((card) => {
-    const activate = () => focusCategoryInventory(card.dataset.category);
-    card.addEventListener("click", activate);
-    card.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      activate();
-    });
+document.querySelectorAll(".category-overview-card[data-category]").forEach((card) => {
+  const activate = () => focusCategoryInventory(card.dataset.category);
+  card.addEventListener("click", activate);
+  card.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    activate();
   });
 });
 
@@ -639,15 +759,93 @@ document
 
 document.getElementById("recentSales").innerHTML =
   sales
-    .slice(-5)
     .reverse()
     .map((sale) => {
-      const items = sale.items
+      const items = itemsForReport(sale)
         .map((item) => `${item.name} x${item.quantity}`)
         .join(", ");
-      return       `<div class="sale-row"><div class="sale-details"><div class="sale-date">${new Date(sale.date).toLocaleString()}</div><div>${escapeHtml(items)}</div></div><strong class="sale-total">${peso(sale.total)}</strong></div>`;
+      const reportTotal = itemsForReport(sale).reduce(
+        (sum, item) => sum + numericValue(item.lineTotal, numericValue(item.price) * numericValue(item.quantity)),
+        0,
+      );
+      const status = sale.status === "voided" ? " · VOIDED" : "";
+      const transaction = sale.transactionNumber || String(sale.id || "SALE").slice(0, 8);
+      return `<div class="sale-row"><div class="sale-details"><div class="sale-date">${escapeHtml(transaction)} · ${new Date(sale.date).toLocaleString()}${status}</div><div>${escapeHtml(items)} · ${escapeHtml(sale.paymentMethod || "cash")}</div>${sale.note ? `<small>${escapeHtml(sale.note)}</small>` : ""}</div><strong class="sale-total">${peso(reportTotal)}</strong>${sale.status === "voided" ? "" : `<button type="button" class="sale-void-button" data-void-sale="${escapeHtml(sale.id)}">VOID</button>`}</div>`;
     })
     .join("") || `<div class="sale-details">No sales recorded yet.</div>`;
+
+function voidSale(saleId) {
+  const approval = window.prompt("Manager approval required. Type APPROVE to void this sale.");
+  if (approval !== "APPROVE") return;
+  const currentSales = window.miniMartDB.sales();
+  const sale = currentSales.find((entry) => entry.id === saleId);
+  if (!sale || sale.status === "voided") return;
+  const inventory = window.miniMartDB.products();
+  itemsForReport(sale).forEach((item) => {
+    const product = inventory.find((entry) =>
+      (item.productId && entry.id === item.productId) || entry.name === item.name,
+    );
+    if (product) {
+      product.stock = window.miniMartDB.roundQuantity(
+        Number(product.stock) + Number(item.quantity),
+        product.unit,
+      );
+    }
+  });
+  sale.status = "voided";
+  sale.voidedAt = new Date().toISOString();
+  sale.voidReason = "Manager-approved void";
+  window.miniMartDB.saveProducts(inventory);
+  window.miniMartDB.saveSales(currentSales);
+  window.location.reload();
+}
+
+document.querySelectorAll("[data-void-sale]").forEach((button) => {
+  button.addEventListener("click", () => voidSale(button.dataset.voidSale));
+});
+
+const currentShift = JSON.parse(localStorage.getItem("miniMartCurrentShift") || "null");
+const shiftSummary = document.getElementById("shiftSummary");
+if (currentShift) {
+  const shiftSales = allSales.filter((sale) => sale.shiftId === currentShift.id);
+  const shiftCashSales = shiftSales.reduce((sum, sale) => {
+    const payments = sale.payments || {};
+    return sum + (sale.paymentMethod === "split"
+      ? numericValue(payments.cash)
+      : sale.paymentMethod === "cash" ? numericValue(payments.cash, sale.total) : 0);
+  }, 0);
+  const expectedCash = numericValue(currentShift.openingCash) + shiftCashSales;
+  const closingCash = currentShift.closedAt ? numericValue(currentShift.closingCash) : null;
+  const variance = closingCash === null ? null : closingCash - expectedCash;
+  shiftSummary.innerHTML = `<div class="shift-summary-grid"><span><small>Shift</small><strong>${escapeHtml(currentShift.id)}</strong></span><span><small>Opening cash</small><strong>${peso(currentShift.openingCash)}</strong></span><span><small>Cash sales</small><strong>${peso(shiftCashSales)}</strong></span><span><small>Expected cash</small><strong>${peso(expectedCash)}</strong></span><span><small>Counted cash</small><strong>${closingCash === null ? "Open" : peso(closingCash)}</strong></span><span><small>Variance</small><strong class="${variance === null ? "" : variance < 0 ? "is-negative" : "is-positive"}">${variance === null ? "—" : peso(variance)}</strong></span></div><small>${shiftSales.length} completed transaction(s) in this shift · Opened ${new Date(currentShift.openedAt).toLocaleString()}</small>`;
+} else {
+  shiftSummary.textContent = "No active shift. Open a shift from Checkout before accepting sales.";
+}
+const paymentTotals = sales.reduce((totals, sale) => {
+  const payments = sale.payments || {};
+  const method = sale.paymentMethod || "cash";
+  const reportTotal = itemsForReport(sale).reduce(
+    (sum, item) => sum + numericValue(item.lineTotal, numericValue(item.price) * numericValue(item.quantity)),
+    0,
+  );
+  const scopeRatio = numericValue(sale.total) > 0 ? reportTotal / numericValue(sale.total) : 0;
+  if (method === "split") {
+    totals.cash += numericValue(payments.cash) * scopeRatio;
+    totals.card += numericValue(payments.card) * scopeRatio;
+    totals.gcash += numericValue(payments.gcash) * scopeRatio;
+  } else {
+    totals[method] =
+      (totals[method] || 0) + numericValue(payments[method], numericValue(sale.total)) * scopeRatio;
+  }
+  return totals;
+}, { cash: 0, card: 0, gcash: 0 });
+document.getElementById("paymentSummary").innerHTML =
+  `<small>Payment totals: Cash ${peso(paymentTotals.cash)} · Card ${peso(paymentTotals.card)} · GCash ${peso(paymentTotals.gcash)}</small>`;
+document.getElementById("paymentCards").innerHTML = [
+  ["Cash", paymentTotals.cash],
+  ["Card", paymentTotals.card],
+  ["GCash", paymentTotals.gcash],
+].map(([label, amount]) => `<div><small>${label}</small><strong>${peso(amount)}</strong></div>`).join("");
 
 function lineEconomics(item) {
   const quantity = Number(item.quantity) || 0;
@@ -683,7 +881,7 @@ function economicsForSales(saleList) {
   let knownUnits = 0;
   let unknownUnits = 0;
   saleList.forEach((sale) => {
-    (sale.items || []).forEach((item) => {
+    itemsForReport(sale).forEach((item) => {
       const row = lineEconomics(item);
       if (row.known) {
         profit += row.profit;
@@ -712,19 +910,14 @@ if (allProfitStats.unknownUnits) {
   profitDataNote.textContent = `Excludes ${allProfitStats.unknownUnits} sold unit${allProfitStats.unknownUnits === 1 ? "" : "s"} with no cost data`;
 }
 
-const todaySalesList = salesByDay.get(todayStats.day?.toDateString?.())
-  ? salesByDay.get(todayStats.day.toDateString())
-  : sales.filter(
-      (sale) =>
-        new Date(sale.date).toDateString() === new Date().toDateString(),
-    );
+const todaySalesList = sales;
 const yesterdaySalesList =
   salesByDay.get(yesterdayStats.day?.toDateString?.()) || [];
 const todayProfitStats = economicsForSales(todaySalesList);
 const yesterdayProfitStats = economicsForSales(yesterdaySalesList);
 const todayProfitCard = document.getElementById("todayProfit");
 const todayProfitNote = document.getElementById("todayProfitNote");
-if (!todayStats.transactions) {
+if (!scopedTransactions) {
   todayProfitCard.innerHTML = peso(0);
   todayProfitNote.textContent = "No sales today";
   todayProfitNote.classList.add("trend-flat");
@@ -767,15 +960,12 @@ const profitPoints = profitTrendValues
 document.getElementById("profitTrendChart").innerHTML =
   `<svg class="trend-line" viewBox="0 0 100 150" preserveAspectRatio="none" aria-hidden="true"><polyline points="${profitPoints}" fill="none" stroke="var(--green)" stroke-width="1.8" vector-effect="non-scaling-stroke"/><polyline points="${profitPoints} 100,150 0,150" fill="rgba(39,114,85,.08)" stroke="none"/></svg>`;
 document.getElementById("profitTrendLabels").innerHTML = trendDays
-  .map(
-    (day) =>
-      `<span>${day.toLocaleDateString("en-US", { weekday: "short" })}</span>`,
-  )
+  .map((day, index) => `<span>${day.toLocaleDateString("en-US", { weekday: "short" })}<b>${peso(profitTrendValues[index])}</b></span>`)
   .join("");
 
 const profitByCategory = new Map();
 sales.forEach((sale) => {
-  (sale.items || []).forEach((item) => {
+  itemsForReport(sale).forEach((item) => {
     const row = lineEconomics(item);
     if (!row.known) return;
     const category = categoryForItem(item);
@@ -838,7 +1028,7 @@ document.getElementById("profitCategoryLabels").innerHTML =
 const profitProductRows = [
   ...sales
     .reduce((groups, sale) => {
-      (sale.items || []).forEach((item) => {
+      itemsForReport(sale).forEach((item) => {
         const current = groups.get(item.name) || {
           name: item.name,
           units: 0,

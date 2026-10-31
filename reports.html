@@ -63,23 +63,47 @@
           <span class="live-dot"></span><strong>LIVE REPORTS</strong
           ><span>Updates when a sale is completed</span
           ><time id="lastUpdated">Updated just now</time>
+          <button class="report-refresh" id="refreshReports" type="button">REFRESH</button>
+          <a class="report-jump-bottom" href="#shift-summary-title">BOTTOM</a>
         </div>
+        <section class="report-filters" aria-label="Report filters">
+          <label>Period
+            <select id="reportPeriod">
+              <option value="today">Today</option>
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="all">All time</option>
+              <option value="custom">Custom range</option>
+            </select>
+          </label>
+          <label>Category
+            <select id="reportCategory"><option value="all">All categories</option></select>
+          </label>
+          <label>Product
+            <select id="reportProduct"><option value="all">All products</option></select>
+          </label>
+          <div class="report-custom-range" id="reportCustomRange" hidden>
+            <label>From<input id="reportFrom" type="date" /></label>
+            <label>To<input id="reportTo" type="date" /></label>
+          </div>
+          <button class="report-filter-reset" id="resetReportFilters" type="button">RESET</button>
+        </section>
         <section class="report-metrics" aria-label="Sales summary">
           <article class="metric-card metric-green">
             <span class="data-icon">▣</span
-            ><span class="metric-label">Today's Revenue</span
+            ><span class="metric-label" id="revenueMetricLabel">Today's Revenue</span
             ><strong id="todayRevenue">&#8369;0.00</strong
             ><small id="todayRevenueNote">From today's sales</small>
           </article>
           <article class="metric-card metric-blue">
             <span class="data-icon">▤</span
-            ><span class="metric-label">Today's Sales</span
+            ><span class="metric-label" id="salesMetricLabel">Today's Sales</span
             ><strong id="todaySales">0</strong
             ><small id="todaySalesNote">Completed transactions</small>
           </article>
           <article class="metric-card metric-amber">
             <span class="data-icon">⌁</span
-            ><span class="metric-label">Products Sold</span
+            ><span class="metric-label" id="productsMetricLabel">Products Sold</span
             ><strong id="productsSold">0</strong
             ><small id="productsSoldNote">Across all sales</small>
           </article>
@@ -98,7 +122,7 @@
           </article>
           <article class="metric-card metric-green">
             <span class="data-icon">₱</span
-            ><span class="metric-label">Today's Profit</span
+            ><span class="metric-label" id="profitMetricLabel">Today's Profit</span
             ><strong id="todayProfit">&#8369;0.00</strong
             ><small id="todayProfitNote">No sales today</small>
           </article>
@@ -114,13 +138,24 @@
           </div>
           <div class="category-overview-grid" id="categoryOverview"></div>
         </section>
+        <section class="report-alerts" aria-labelledby="report-alerts-title">
+          <div class="section-heading">
+            <div><div class="eyebrow">INVENTORY ALERTS</div><h2 id="report-alerts-title">ACTION NEEDED</h2></div>
+            <span class="panel-note">Current inventory</span>
+          </div>
+          <div class="report-alert-grid">
+            <a class="report-alert-card" href="inventory.html?filter=out"><strong id="outOfStockItems">0</strong><span>Out of stock</span></a>
+            <a class="report-alert-card" href="inventory.html?filter=low"><strong id="alertLowStockItems">0</strong><span>Low stock</span></a>
+            <a class="report-alert-card" href="inventory.html?filter=expiring"><strong id="expiringItems">0</strong><span>Expiring in 30 days</span></a>
+          </div>
+        </section>
 
         <section class="dashboard-grid" aria-label="Sales visualizations">
           <article class="report-panel trend-panel panel-wide">
             <div class="panel-heading">
               <span class="panel-icon">⌁</span>
               <h2>SALES TREND</h2>
-              <span class="panel-note">Last 7 days</span>
+              <span class="panel-note" id="salesTrendNote">Last 7 days</span>
             </div>
             <div
               class="trend-chart"
@@ -186,8 +221,8 @@
             <div class="bar-legend">
               <span><i class="legend-category"></i> Category total stock</span
               ><span
-                ><i class="legend-threshold"></i> Low-stock threshold (configured
-                in Settings)</span
+                ><i class="legend-threshold"></i> Low-stock threshold (product minimum
+                or Settings default)</span
               >
             </div>
           </article>
@@ -206,7 +241,7 @@
               <div class="panel-heading">
                 <span class="panel-icon">⌁</span>
                 <h2>PROFIT TREND</h2>
-                <span class="panel-note">Last 7 days</span>
+                <span class="panel-note" id="profitTrendNote">Last 7 days</span>
               </div>
               <div
                 class="trend-chart"
@@ -293,7 +328,16 @@
             <span class="panel-icon">▣</span>
             <h2 id="recent-sales-title">RECENT SALES</h2>
           </div>
-          <div id="recentSales"></div>
+          <div class="recent-sales-list" id="recentSales"></div>
+        </section>
+        <section class="report-panel recent-panel" aria-labelledby="shift-summary-title">
+          <div class="panel-heading">
+            <span class="panel-icon">◷</span>
+            <h2 id="shift-summary-title">CURRENT SHIFT</h2>
+          </div>
+          <div id="shiftSummary"></div>
+          <div id="paymentSummary" class="report-payment-summary"></div>
+          <div class="payment-cards" id="paymentCards"></div>
         </section>
       </main>
     </div>

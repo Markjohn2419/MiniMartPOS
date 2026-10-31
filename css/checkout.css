@@ -12,6 +12,26 @@
 .checkout-page .products {
   align-items: start;
 }
+.checkout-page .checkout-recent-products {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 2px 0 4px;
+}
+.checkout-page .checkout-recent-products > span {
+  color: var(--muted);
+  font: 10px "DM Mono", monospace;
+}
+.checkout-page .checkout-recent-products button {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 5px 8px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: 11px "DM Mono", monospace;
+}
 .checkout-page .checkout-category {
   grid-column: 1 / -1;
   display: flex;
@@ -219,6 +239,106 @@ html[data-theme="dark"] .checkout-page .product-icon img {
     16px "DM Mono",
     monospace;
 }
+.checkout-page .payment-input-wrap input:focus-visible {
+  outline: 0;
+  box-shadow: none;
+}
+.checkout-page .checkout-payment-select:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px rgba(43, 117, 145, 0.1);
+}
+.checkout-page .checkout-payment-select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #d5d2c7;
+  border-radius: 3px;
+  padding: 0 10px;
+  background: var(--field);
+  color: var(--ink);
+  font: 14px "DM Mono", monospace;
+}
+.checkout-page .split-payment-fields {
+  display: contents;
+}
+.checkout-page .split-payment-fields[hidden] {
+  display: none;
+}
+.checkout-page .checkout-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 8px;
+}
+.checkout-page .checkout-register-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 14px 20px 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 3px;
+  background: var(--surface-soft);
+}
+.checkout-page .checkout-register-controls p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font: 11px "DM Mono", monospace;
+}
+.checkout-page .checkout-shift-button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  background: var(--white);
+  color: var(--accent);
+  font: 700 12px "Barlow Condensed", sans-serif;
+  white-space: nowrap;
+}
+.checkout-page .checkout-secondary-button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: 700 12px "Barlow Condensed", sans-serif;
+}
+.checkout-page .checkout-secondary-button:disabled {
+  opacity: .5;
+}
+.checkout-page .product h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.checkout-page .product-favorite {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 15px;
+}
+.checkout-page .product-favorite.is-favorite {
+  color: var(--gold);
+}
+@media (max-width: 640px) {
+  .checkout-page .checkout-register-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .checkout-page .checkout-shift-button {
+    width: 100%;
+  }
+  .checkout-page .checkout-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+  .checkout-page .checkout-actions .sell-button {
+    grid-column: 1 / -1;
+  }
+}
 .checkout-page .payment-input-wrap input::-webkit-inner-spin-button {
   display: none;
 }
@@ -233,6 +353,35 @@ html[data-theme="dark"] .checkout-page .product-icon img {
   font:
     700 20px "Barlow Condensed",
     sans-serif;
+}
+.checkout-page .cart-quantity-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 10px;
+}
+.checkout-page .cart-quantity-button {
+  display: inline-grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: 700 16px "Barlow Condensed", sans-serif;
+}
+.checkout-page .cart-quantity-button:hover,
+.checkout-page .cart-quantity-button:focus-visible {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.checkout-page .cart-quantity {
+  min-width: 18px;
+  text-align: center;
+  color: var(--ink);
+  font: 600 12px "DM Mono", monospace;
 }
 .checkout-page .payment-error {
   grid-column: 1 / -1;
@@ -422,6 +571,30 @@ html[data-theme="dark"] .checkout-page .sell-button:not(:disabled) {
   background: var(--red);
   color: #fffaf7;
   box-shadow: 0 0 18px var(--accent-glow);
+}
+html[data-theme="dark"] .checkout-page .checkout-shift-button,
+html[data-theme="dark"] .checkout-page .checkout-secondary-button,
+html[data-theme="dark"] .checkout-page .checkout-confirm-back,
+html[data-theme="dark"] .checkout-page .measure-mode-button,
+html[data-theme="dark"] .checkout-page .measure-quick-picks button,
+html[data-theme="dark"] .checkout-page .measure-cancel {
+  border-color: var(--line);
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+html[data-theme="dark"] .checkout-page .checkout-shift-button:hover,
+html[data-theme="dark"] .checkout-page .checkout-secondary-button:hover:not(:disabled),
+html[data-theme="dark"] .checkout-page .checkout-confirm-back:hover,
+html[data-theme="dark"] .checkout-page .measure-mode-button:hover,
+html[data-theme="dark"] .checkout-page .measure-quick-picks button:hover,
+html[data-theme="dark"] .checkout-page .measure-cancel:hover {
+  background: var(--surface-raised);
+  color: var(--ink);
+}
+html[data-theme="dark"] .checkout-page .measure-mode-button.is-active {
+  border-color: var(--red);
+  background: var(--surface-raised);
+  color: var(--red);
 }
 /* Measured-product selling panel */
 .measure-modal {

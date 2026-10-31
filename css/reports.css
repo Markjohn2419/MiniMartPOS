@@ -33,6 +33,97 @@
   margin-left: auto;
   color: var(--blue);
 }
+.reports-page .report-refresh,
+.reports-page .report-jump-bottom,
+.reports-page .report-filter-reset {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: 700 10px "DM Mono", monospace;
+  padding: 7px 9px;
+}
+.reports-page .report-refresh:hover,
+.reports-page .report-jump-bottom:hover,
+.reports-page .report-filter-reset:hover {
+  background: var(--surface-raised);
+}
+.reports-page .report-jump-bottom {
+  color: var(--ink);
+  text-decoration: none;
+}
+html {
+  scroll-behavior: smooth;
+}
+.reports-page .report-filters {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-soft);
+}
+.reports-page .report-filters label,
+.reports-page .report-custom-range label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font: 10px "DM Mono", monospace;
+  text-transform: uppercase;
+}
+.reports-page .report-filters select,
+.reports-page .report-filters input {
+  min-height: 34px;
+  min-width: 130px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--field);
+  color: var(--ink);
+  font: 13px Outfit, sans-serif;
+  text-transform: none;
+}
+.reports-page .report-custom-range {
+  display: flex;
+  gap: 8px;
+}
+.reports-page .report-filters .report-filter-reset {
+  margin-left: auto;
+}
+.reports-page .report-alerts {
+  margin-bottom: 16px;
+}
+.reports-page .report-alert-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.reports-page .report-alert-card {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--red);
+  border-radius: 4px;
+  background: var(--white);
+  color: var(--ink);
+  text-decoration: none;
+}
+.reports-page .report-alert-card:hover {
+  background: var(--surface-raised);
+}
+.reports-page .report-alert-card strong {
+  color: var(--red);
+  font: 700 24px "Barlow Condensed", sans-serif;
+}
+.reports-page .report-alert-card span {
+  color: var(--muted);
+  font: 10px "DM Mono", monospace;
+  text-transform: uppercase;
+}
 .reports-page .live-dot {
   width: 7px;
   height: 7px;
@@ -441,6 +532,14 @@
   font:
     9px "DM Mono",
     monospace;
+}
+.reports-page .chart-labels span {
+    display: grid;
+    gap: 2px;
+}
+.reports-page .chart-labels b {
+    color: var(--ink);
+    font-weight: 500;
 }
 .reports-page .period-panel {
   min-height: 218px;
@@ -1018,6 +1117,12 @@
 .reports-page .recent-panel {
   margin-top: 12px;
 }
+.reports-page .recent-sales-list {
+  height: 285px;
+  max-height: 285px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
 .reports-page .profit-section {
   margin-top: 18px;
 }
@@ -1044,6 +1149,9 @@
 }
 .reports-page .profit-table-wrap {
   overflow-x: auto;
+  max-height: 285px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 .reports-page .profit-table {
   width: 100%;
@@ -1057,6 +1165,10 @@
   font-size: 13px;
 }
 .reports-page .profit-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--white);
   color: var(--muted);
   text-align: left;
   font:
@@ -1098,8 +1210,9 @@
   color: var(--gold);
 }
 .reports-page .sale-row {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(78px, auto) 52px;
+  align-items: center;
   gap: 20px;
   padding: 9px 0;
   border-bottom: 1px dotted var(--line);
@@ -1109,7 +1222,8 @@
   border-bottom: 0;
 }
 .reports-page .sale-details {
-  color: #4f5e54;
+  min-width: 0;
+  color: var(--muted);
   line-height: 1.7;
 }
 .reports-page .sale-date {
@@ -1119,11 +1233,89 @@
     monospace;
 }
 .reports-page .sale-total {
+  min-width: 78px;
+  text-align: right;
   color: var(--red);
   font:
     700 16px "Barlow Condensed",
     sans-serif;
   white-space: nowrap;
+}
+.reports-page .shift-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.reports-page .shift-summary-grid span {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--surface-soft);
+}
+.reports-page .shift-summary-grid small,
+.reports-page .payment-cards small {
+  color: var(--muted);
+  font: 9px "DM Mono", monospace;
+  text-transform: uppercase;
+}
+.reports-page .shift-summary-grid strong {
+  color: var(--ink);
+  font: 700 16px "Barlow Condensed", sans-serif;
+}
+.reports-page .shift-summary-grid strong.is-negative {
+  color: var(--red);
+}
+.reports-page .shift-summary-grid strong.is-positive {
+  color: var(--green);
+}
+.reports-page .payment-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.reports-page .payment-cards div {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border-top: 2px solid var(--blue);
+  background: var(--surface-soft);
+}
+.reports-page .payment-cards strong {
+  color: var(--ink);
+  font: 700 17px "Barlow Condensed", sans-serif;
+}
+.reports-page .sale-void-button {
+  width: 52px;
+  margin-left: 0;
+  border: 1px solid var(--red);
+  border-radius: 3px;
+  padding: 5px 8px;
+  background: transparent;
+  color: var(--red);
+  font: 700 10px "DM Mono", monospace;
+}
+@media (max-width: 550px) {
+  .reports-page .sale-row {
+    grid-template-columns: minmax(0, 1fr) 70px 48px;
+    gap: 8px;
+  }
+  .reports-page .sale-total {
+    min-width: 70px;
+    font-size: 14px;
+  }
+  .reports-page .sale-void-button {
+    width: 48px;
+    padding: 5px 3px;
+  }
+}
+.reports-page .report-payment-summary {
+  margin-top: 12px;
+  color: var(--muted);
+  font: 11px "DM Mono", monospace;
 }
 .reports-page .low-stock-modal {
   position: fixed;
@@ -1302,6 +1494,14 @@ html[data-theme="dark"] .reports-page .profit-table thead th {
   background: var(--surface-soft);
   color: var(--muted);
 }
+html[data-theme="dark"] .reports-page .low-stock-actions a {
+  background: var(--ink);
+  color: var(--paper);
+}
+html[data-theme="dark"] .reports-page .sale-void-button {
+  background: var(--surface-soft);
+  color: #ff8f80;
+}
 @keyframes fade-area {
   to {
     opacity: 1;
@@ -1371,6 +1571,23 @@ html[data-theme="dark"] .reports-page .profit-table thead th {
   }
 }
 @media (max-width: 550px) {
+  .reports-page .report-livebar {
+    flex-wrap: wrap;
+  }
+  .reports-page .report-livebar time {
+    margin-left: 0;
+  }
+  .reports-page .report-filters .report-filter-reset {
+    margin-left: 0;
+  }
+  .reports-page .report-alert-grid,
+  .reports-page .shift-summary-grid,
+  .reports-page .payment-cards {
+    grid-template-columns: 1fr;
+  }
+  .reports-page .report-custom-range {
+    width: 100%;
+  }
   .reports-page .report-metrics,
   .reports-page .dashboard-grid {
     grid-template-columns: 1fr;

@@ -33,6 +33,12 @@ const sukiPointsExpiryDays = document.getElementById("sukiPointsExpiryDays");
 const sukiPointsExpiryDaysField = document.getElementById("sukiPointsExpiryDaysField");
 const backupStatus = document.getElementById("backupStatus");
 const backupSummary = document.getElementById("backupSummary");
+const backupRestorePreview = document.getElementById("backupRestorePreview");
+const backupRestorePreviewText = document.getElementById("backupRestorePreviewText");
+const runDataHealthCheck = document.getElementById("runDataHealthCheck");
+const dataHealthResults = document.getElementById("dataHealthResults");
+const settingsSearch = document.getElementById("settingsSearch");
+const settingsSearchEmpty = document.getElementById("settingsSearchEmpty");
 const exportInventoryHistory = document.getElementById("exportInventoryHistory");
 const restoreBackup = document.getElementById("restoreBackup");
 const reportExportData = document.getElementById("reportExportData");
@@ -98,6 +104,7 @@ let productImportRows = [];
 let productImportFileData = null;
 let productImportReturnFocus = null;
 let resetDataReturnFocus = null;
+let pendingRestoreData = null;
 const backupKeys = {
   products: "miniMartProducts",
   sales: "miniMartSales",
@@ -180,6 +187,13 @@ function updateStorePreviews() {
   })}`;
 }
 
+function updateBrandLogo() {
+  document.querySelectorAll(".brand-mark img").forEach((image) => {
+    image.src = logoDataUrl || "Icons/grocery-store.png";
+    image.classList.toggle("custom-store-logo", Boolean(logoDataUrl));
+  });
+}
+
 function setFormValues(settings) {
   Object.entries(fields).forEach(([fieldName, field]) => {
     field.value = settings[fieldName] ?? "";
@@ -196,6 +210,7 @@ function setFormValues(settings) {
     logoFileName.textContent = "No file chosen";
     removeLogo.hidden = true;
   }
+  updateBrandLogo();
   updateStorePreviews();
 }
 
@@ -251,7 +266,29 @@ function readBackupData() {
   const data = {};
   Object.entries(backupKeys).forEach(([name, key]) => {
     const raw = localStorage.getItem(key);
-    data[name] = raw ? JSON.parse(raw) : name === "settings" ? window.miniMartSettings.get() : [];
+    if (!raw) {
+      data[name] = name === "settings" ? window.miniMartSettings.get() : [];
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (name === "settings") {
+        data[name] =
+          parsed && typeof parsed === "object" && !Array.isArray(parsed)
+            ? parsed
+            : window.miniMartSettings.get();
+      } else if (name === "categoryIcons") {
+        data[name] =
+          parsed && typeof parsed === "object" && !Array.isArray(parsed)
+            ? parsed
+            : {};
+      } else {
+        data[name] = Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (error) {
+      console.error(`Could not read ${name} backup data:`, error);
+      data[name] = name === "settings" ? window.miniMartSettings.get() : [];
+    }
   });
   return data;
 }
@@ -480,7 +517,18 @@ function renderProductImportPreview() {
   const counts = productImportCounts();
   productImportSummary.textContent = `${counts.newCount} new, ${counts.duplicates} duplicates, ${counts.warnings} warnings, ${counts.errors} errors`;
   const validCount = productImportRows.filter(productImportIsIncluded).length;
-  confirmProductImport.textContent = `IMPORT ${validCount} PRODUCT${validCount === 1 ? "" : "S"}`;
+  const updateCount = productImportRows.filter(
+    (row) => row.duplicate && !row.error && productDuplicateMode.value === "update",
+  ).length;
+  confirmProductImport.textContent = updateCount
+    ? `IMPORT ${validCount} · UPDATE ${updateCount}`
+    : `IMPORT ${validCount} PRODUCT${validCount === 1 ? "" : "S"}`;
+  productImportModalStatus.textContent = updateCount
+    ? `${updateCount} existing product${updateCount === 1 ? "" : "s"} will be updated. Review the changes before confirming.`
+    : "";
+  productImportModalStatus.className = updateCount
+    ? "settings-status settings-status-warning"
+    : "settings-status";
   confirmProductImport.disabled = validCount === 0;
 }
 
@@ -967,16 +1015,68 @@ function downloadBackupFile() {
 function updateBackupSummary() {
   const data = readBackupData();
   const lastBackup = localStorage.getItem("miniMartLastBackup");
-  const ageDays = lastBackup
-    ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000)
+  const lastBackupDate = lastBackup ? new Date(lastBackup) : null;
+  const hasValidBackupDate = lastBackupDate && !Number.isNaN(lastBackupDate.getTime());
+  const ageDays = hasValidBackupDate
+    ? Math.floor((Date.now() - lastBackupDate.getTime()) / 86400000)
     : null;
   const ageWarning = ageDays === null
-    ? " No backup recorded yet."
+    ? lastBackup
+      ? " Backup date is invalid."
+      : " No backup recorded yet."
     : ageDays > 30
       ? ` Backup is ${ageDays} days old.`
       : "";
-  backupSummary.textContent = `${data.products.length} products · ${data.sales.length} sales · ${data.customers.length} customers · ${data.inventoryAdjustments.length} stock adjustments${lastBackup ? ` · Last backup ${window.miniMartSettings.formatDate(new Date(lastBackup))}` : ""}${ageWarning}`;
-  backupSummary.classList.toggle("is-warning", ageDays === null || ageDays > 30);
+  backupSummary.textContent = `${data.products.length} products · ${data.sales.length} sales · ${data.customers.length} customers · ${data.inventoryAdjustments.length} stock adjustments${hasValidBackupDate ? ` · Last backup ${window.miniMartSettings.formatDate(lastBackupDate)}` : ""}${ageWarning}`;
+  backupSummary.classList.toggle("is-warning", !hasValidBackupDate || ageDays > 30);
+}
+
+function showRestorePreview(data, filename) {
+  pendingRestoreData = data;
+  backupRestorePreviewText.textContent =
+    `${filename}: ${data.products.length} products, ${data.sales.length} sales, ` +
+    `${data.categories.length} categories, ${data.customers.length} customers, ` +
+    `${(data.inventoryAdjustments || []).length} stock adjustments, and settings.`;
+  backupRestorePreview.hidden = false;
+}
+
+function clearRestorePreview() {
+  pendingRestoreData = null;
+  backupRestorePreview.hidden = true;
+  backupRestorePreviewText.textContent = "";
+}
+
+function runHealthCheck() {
+  const products = window.miniMartDB.products();
+  const sales = window.miniMartDB.sales();
+  const categories = window.miniMartDB.categories();
+  const customers = readBackupData().customers;
+  const categorySet = new Set(categories.map((category) => category.toLowerCase()));
+  const duplicateProducts = products.length - new Set(products.map((product) => product.name.trim().toLowerCase())).size;
+  const invalidProducts = products.filter((product) =>
+    !product.name?.trim() ||
+    !product.category?.trim() ||
+    !categorySet.has(product.category.trim().toLowerCase()) ||
+    !Number.isFinite(Number(product.price)) ||
+    Number(product.price) < 0 ||
+    !Number.isFinite(Number(product.stock)) ||
+    Number(product.stock) < 0,
+  ).length;
+  const invalidSales = sales.filter((sale) =>
+    !sale || !Array.isArray(sale.items) || !Number.isFinite(Number(sale.total)) ||
+    !sale.items.every((item) => item?.name && Number.isFinite(Number(item.quantity))),
+  ).length;
+  const invalidCustomers = customers.filter((customer) => !customer || !customer.name?.trim()).length;
+  const issues = [
+    duplicateProducts ? `${duplicateProducts} duplicate product name${duplicateProducts === 1 ? "" : "s"}` : "",
+    invalidProducts ? `${invalidProducts} invalid product record${invalidProducts === 1 ? "" : "s"}` : "",
+    invalidSales ? `${invalidSales} invalid sale record${invalidSales === 1 ? "" : "s"}` : "",
+    invalidCustomers ? `${invalidCustomers} invalid Suki customer${invalidCustomers === 1 ? "" : "s"}` : "",
+  ].filter(Boolean);
+  dataHealthResults.className = `data-health-results${issues.length ? " is-warning" : " is-healthy"}`;
+  dataHealthResults.textContent = issues.length
+    ? `Issues found: ${issues.join("; ")}.`
+    : `Healthy: ${products.length} products, ${sales.length} sales, ${customers.length} customers, and ${categories.length} categories checked.`;
 }
 
 function exportInventoryHistoryFile() {
@@ -1125,7 +1225,13 @@ function isValidBackup(documentData) {
     Array.isArray(data.products) &&
     Array.isArray(data.sales) &&
     Array.isArray(data.categories) &&
+    (!Object.prototype.hasOwnProperty.call(data, "categoryIcons") ||
+      (data.categoryIcons && typeof data.categoryIcons === "object" && !Array.isArray(data.categoryIcons))) &&
+    (!Object.prototype.hasOwnProperty.call(data, "deletedProducts") ||
+      Array.isArray(data.deletedProducts)) &&
     Array.isArray(data.customers) &&
+    (!Object.prototype.hasOwnProperty.call(data, "inventoryAdjustments") ||
+      Array.isArray(data.inventoryAdjustments)) &&
     data.settings &&
     typeof data.settings === "object" &&
     !Array.isArray(data.settings)
@@ -1568,6 +1674,18 @@ function validateInventoryRules() {
 setFormValues(currentSettings);
 setInventoryRulesValues(currentSettings);
 setSukiSettingsValues(currentSettings);
+
+[
+  fields.storeName,
+  fields.address,
+  fields.contactNumber,
+  fields.registerName,
+  fields.receiptFooter,
+].forEach((field) => field.addEventListener("input", updateStorePreviews));
+[fields.timezone, fields.dateFormat].forEach((field) =>
+  field.addEventListener("change", updateStorePreviews),
+);
+
 function updateThemeToggle(theme) {
   const isDark = theme === "dark";
   themeToggle.setAttribute("aria-checked", String(isDark));
@@ -1716,23 +1834,12 @@ storeInfoForm.addEventListener("submit", (event) => {
     logoDataUrl,
   });
 
-  [fields.storeName, fields.address, fields.contactNumber, fields.registerName, fields.receiptFooter, fields.timezone, fields.dateFormat]
-    .forEach((field) => field.addEventListener("input", updateStorePreviews));
-  [fields.timezone, fields.dateFormat].forEach((field) =>
-    field.addEventListener("change", updateStorePreviews),
-  );
-
   if (error) {
     setStatus("Could not save settings.", true);
     return;
   }
 
-  document.querySelectorAll(".brand-mark img").forEach((image) => {
-    if (logoDataUrl) {
-      image.src = logoDataUrl;
-      image.classList.add("custom-store-logo");
-    }
-  });
+  updateBrandLogo();
   setStatus("Saved");
   markSettingsClean();
 });
@@ -1837,6 +1944,7 @@ document.addEventListener("keydown", (event) => {
 restoreBackup.addEventListener("change", () => {
   const [file] = restoreBackup.files;
   if (!file) return;
+  clearRestorePreview();
   const reader = new FileReader();
   reader.addEventListener("load", () => {
     let parsed;
@@ -1857,20 +1965,25 @@ restoreBackup.addEventListener("change", () => {
       `This will replace ${data.products.length} products, ${data.sales.length} sales, ` +
       `${data.categories.length} categories, ${data.customers.length} customers, ` +
       `${(data.inventoryAdjustments || []).length} stock adjustments, and your settings.`;
+    showRestorePreview(data, file.name);
     setBackupStatus(summary);
     if (window.confirm(`${summary}\n\nContinue restoring this backup?`)) {
-      restoreBackupData(data);
+      restoreBackupData(pendingRestoreData);
       return;
     }
     setBackupStatus("Restore cancelled.");
+    clearRestorePreview();
     restoreBackup.value = "";
   });
+
   reader.addEventListener("error", () => {
     setBackupStatus("Could not read that backup file. Nothing was changed.", true);
     restoreBackup.value = "";
   });
   reader.readAsText(file);
 });
+
+runDataHealthCheck.addEventListener("click", runHealthCheck);
 
 categoryManagementList.addEventListener("click", (event) => {
   const iconButton = event.target.closest("[data-category-icon]");
@@ -2015,7 +2128,7 @@ categoryDeleteModal.addEventListener("click", (event) => {
 });
 
 settingsTabs.forEach((tab) => {
-  tab.addEventListener("click", () => {
+  const activateTab = () => {
     const panelId = tab.dataset.settingsPanel;
     settingsTabs.forEach((button) => {
       const active = button === tab;
@@ -2027,8 +2140,51 @@ settingsTabs.forEach((tab) => {
       panel.hidden = panel.id !== panelId;
     });
     document.getElementById(panelId)?.focus({ preventScroll: true });
+  };
+  tab.addEventListener("click", activateTab);
+  tab.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const visibleTabs = settingsTabs.filter((button) => !button.hidden);
+    const currentIndex = visibleTabs.indexOf(tab);
+    const nextIndex = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? visibleTabs.length - 1
+        : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + visibleTabs.length) % visibleTabs.length;
+    visibleTabs[nextIndex]?.focus();
+    visibleTabs[nextIndex]?.click();
   });
 });
+
+function updateSettingsSearch() {
+  const query = settingsSearch.value.trim().toLowerCase();
+  let visibleCount = 0;
+  settingsTabs.forEach((tab) => {
+    const panel = document.getElementById(tab.dataset.settingsPanel);
+    const matches = !query ||
+      `${tab.textContent} ${panel?.textContent || ""}`.toLowerCase().includes(query);
+    tab.hidden = !matches;
+    if (matches) visibleCount += 1;
+    if (!matches && panel && !panel.hidden) {
+      panel.hidden = true;
+    }
+  });
+  settingsSearchEmpty.hidden = visibleCount > 0;
+  if (query && visibleCount === 1) {
+    const match = settingsTabs.find((tab) => !tab.hidden);
+    if (match) match.click();
+  } else if (!query) {
+    const activeTab = settingsTabs.find((tab) => tab.classList.contains("is-active"));
+    if (activeTab) {
+      document.querySelectorAll(".settings-card[role='tabpanel']").forEach((panel) => {
+        panel.hidden = panel.id !== activeTab.dataset.settingsPanel;
+      });
+    }
+  }
+}
+
+settingsSearch.addEventListener("input", updateSettingsSearch);
 
 themeToggle.addEventListener("click", () => {
   const isDark = themeToggle.getAttribute("aria-checked") === "true";
@@ -2058,8 +2214,34 @@ function settingsFormSnapshot() {
 }
 
 let savedSettingsSnapshot = "";
+let savedFormSnapshots = new Map();
+function formSnapshot(form) {
+  return JSON.stringify(
+    [...form.elements]
+      .filter((element) => element.type !== "file")
+      .map((element) => [
+        element.name || element.id,
+        element.type === "checkbox" ? element.checked : element.value,
+      ]),
+  );
+}
+function updateUnsavedTabMarkers() {
+  settingsTabs.forEach((tab) => {
+    const panel = document.getElementById(tab.dataset.settingsPanel);
+    const form = panel?.querySelector("form");
+    tab.classList.toggle("has-unsaved-changes", Boolean(form?.classList.contains("has-unsaved-changes")));
+  });
+}
 function markSettingsClean() {
   savedSettingsSnapshot = JSON.stringify(settingsFormSnapshot());
+  savedFormSnapshots = new Map(
+    [storeInfoForm, inventoryRulesForm, sukiSettingsForm].map((form) => [
+      form,
+      formSnapshot(form),
+    ]),
+  );
+  document.querySelectorAll("form.has-unsaved-changes").forEach((form) => form.classList.remove("has-unsaved-changes"));
+  updateUnsavedTabMarkers();
 }
 function hasUnsavedSettings() {
   return savedSettingsSnapshot !== JSON.stringify(settingsFormSnapshot());
@@ -2067,10 +2249,12 @@ function hasUnsavedSettings() {
 
 [storeInfoForm, inventoryRulesForm, sukiSettingsForm].forEach((form) => {
   form.addEventListener("input", () => {
-    form.classList.toggle("has-unsaved-changes", hasUnsavedSettings());
+    form.classList.toggle("has-unsaved-changes", savedFormSnapshots.get(form) !== formSnapshot(form));
+    updateUnsavedTabMarkers();
   });
   form.addEventListener("change", () => {
-    form.classList.toggle("has-unsaved-changes", hasUnsavedSettings());
+    form.classList.toggle("has-unsaved-changes", savedFormSnapshots.get(form) !== formSnapshot(form));
+    updateUnsavedTabMarkers();
   });
 });
 

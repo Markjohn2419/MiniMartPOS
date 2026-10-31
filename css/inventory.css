@@ -10,6 +10,39 @@
   gap: 8px;
   align-items: center;
 }
+.inventory-page .inventory-summary {
+  margin: 8px 0 12px;
+  color: var(--muted);
+  font: 11px "DM Mono", monospace;
+}
+.inventory-page .inventory-view-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  margin: 10px 0;
+}
+.inventory-page .inventory-view-toolbar label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font: 10px "DM Mono", monospace;
+  text-transform: uppercase;
+}
+.inventory-page .inventory-view-toolbar select {
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--field);
+  color: var(--ink);
+  font: 13px Outfit, sans-serif;
+  text-transform: none;
+}
+.inventory-page .inventory-expiry {
+  white-space: nowrap;
+  color: var(--muted);
+  font: 11px "DM Mono", monospace;
+}
 .inventory-page .select-column {
   width: 34px;
   text-align: center;
@@ -90,6 +123,18 @@
   font: 14px Outfit, sans-serif;
   text-transform: none;
 }
+@media (max-width: 700px) {
+  .inventory-page .inventory-view-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+  .inventory-page .inventory-view-toolbar label {
+    flex: 1 1 130px;
+  }
+  .inventory-page .inventory-view-toolbar button {
+    flex: 1 1 100%;
+  }
+}
 .inventory-page .stock-history-list {
   display: grid;
   max-height: 320px;
@@ -150,6 +195,7 @@
 .inventory-page .product-modal .modal-fields label {
   display: grid;
   gap: 7px;
+  align-content: start;
 }
 .inventory-page .product-modal .field-error {
   min-height: 14px;
@@ -223,6 +269,11 @@
 .inventory-page .modal-delete:hover,
 .inventory-page .modal-delete:focus-visible {
   background: #b82d1b;
+}
+html[data-theme="dark"] .inventory-page .modal-cancel {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--ink);
 }
 .inventory-page .category-group td {
   padding: 10px 12px 7px;

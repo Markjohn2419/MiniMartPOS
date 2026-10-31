@@ -27,6 +27,34 @@
   padding-bottom: 3px;
 }
 
+.settings-search {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.settings-search input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--field);
+  color: var(--ink);
+  font: 14px Outfit, sans-serif;
+}
+
+.settings-search input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(43, 117, 145, 0.1);
+  outline: none;
+}
+
+.settings-search-empty {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .settings-tab {
   flex: 0 0 auto;
   border: 1px solid var(--line);
@@ -36,6 +64,11 @@
   color: var(--muted);
   font: 700 12px Outfit, sans-serif;
   white-space: nowrap;
+}
+
+.settings-tab.has-unsaved-changes::after {
+  content: " •";
+  color: var(--red);
 }
 
 .settings-tab:hover,
@@ -61,6 +94,56 @@
 
 .backup-summary.is-warning {
   border-color: color-mix(in srgb, var(--red) 45%, var(--line));
+  color: var(--red);
+}
+
+.backup-restore-preview {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--blue) 45%, var(--line));
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--blue) 8%, var(--surface-raised));
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.backup-restore-preview strong {
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.data-health-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  align-items: center;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.data-health-panel h4 {
+  margin: 0;
+}
+
+.data-health-panel .settings-help {
+  margin-top: 4px;
+}
+
+.data-health-results {
+  grid-column: 1 / -1;
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.data-health-results.is-healthy {
+  color: var(--green);
+}
+
+.data-health-results.is-warning {
   color: var(--red);
 }
 
@@ -304,6 +387,10 @@
 }
 
 .settings-status-error {
+  color: var(--red);
+}
+
+.settings-status-warning {
   color: var(--red);
 }
 
